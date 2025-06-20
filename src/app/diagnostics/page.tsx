@@ -38,7 +38,6 @@ export default function DiagnosticsPage() {
       setLoading(false);
     }
   };
-
   const testEndpoints = async () => {
     setLoading(true);
     setError(null);
@@ -46,6 +45,7 @@ export default function DiagnosticsPage() {
     try {
       const endpoints = [
         { name: "Usuario", url: "/api/figma/user" },
+        { name: "Equipos", url: "/api/figma/teams" },
         { name: "Drafts", url: "/api/figma/drafts" },
         { name: "Test API", url: "/api/figma/test" },
       ];

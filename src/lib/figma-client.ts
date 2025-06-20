@@ -8,6 +8,61 @@ import {
 const FIGMA_API_BASE = "https://api.figma.com/v1";
 
 /**
+ * Cache configuration
+ */
+const CACHE_DURATION = {
+  TEAMS: 5 * 60 * 1000, // 5 minutes
+  PROJECTS: 3 * 60 * 1000, // 3 minutes
+  FILES: 2 * 60 * 1000, // 2 minutes
+  USER: 10 * 60 * 1000, // 10 minutes
+};
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  expiresAt: number;
+}
+
+/**
+ * Simple in-memory cache for Figma API responses
+ */
+class FigmaCache {
+  private static cache = new Map<string, CacheEntry<unknown>>();
+  static get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry || Date.now() > entry.expiresAt) {
+      if (entry) {
+        this.cache.delete(key);
+      }
+      return null;
+    }
+    return entry.data as T;
+  }
+
+  static set<T>(key: string, data: T, ttl: number): void {
+    const now = Date.now();
+    this.cache.set(key, {
+      data,
+      timestamp: now,
+      expiresAt: now + ttl,
+    });
+  }
+
+  static clear(): void {
+    this.cache.clear();
+  }
+
+  static clearExpired(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.cache.entries()) {
+      if (now > entry.expiresAt) {
+        this.cache.delete(key);
+      }
+    }
+  }
+}
+
+/**
  * Additional Figma API types
  */
 interface FigmaFileResponse {
@@ -53,24 +108,63 @@ export class FigmaClient {
    * Get current user information
    */
   async getUser(): Promise<FigmaUserResponse> {
-    return this.makeRequest<FigmaUserResponse>("/me");
+    // Check cache first
+    const cachedUser = FigmaCache.get<FigmaUserResponse>("user");
+    if (cachedUser) {
+      console.log("Returning cached user data");
+      return cachedUser;
+    }
+
+    // Fetch from API
+    const userData = await this.makeRequest<FigmaUserResponse>("/me");
+
+    // Cache the user data
+    FigmaCache.set("user", userData, CACHE_DURATION.USER);
+
+    return userData;
   }
   /**
    * Get all projects for a team
    */
   async getTeamProjects(teamId: string): Promise<{ projects: FigmaProject[] }> {
-    return this.makeRequest<{ projects: FigmaProject[] }>(
+    // Check cache first
+    const cachedProjects = FigmaCache.get<{ projects: FigmaProject[] }>(`projects_${teamId}`);
+    if (cachedProjects) {
+      console.log(`Returning cached projects for team ${teamId}`);
+      return cachedProjects;
+    }
+
+    // Fetch from API
+    const projectsResponse = await this.makeRequest<{ projects: FigmaProject[] }>(
       `/teams/${teamId}/projects`
     );
+
+    // Cache the projects data
+    FigmaCache.set(`projects_${teamId}`, projectsResponse, CACHE_DURATION.PROJECTS);
+
+    return projectsResponse;
   }
 
   /**
    * Get files in a project
    */
   async getProjectFiles(projectId: string): Promise<{ files: FigmaFile[] }> {
-    return this.makeRequest<{ files: FigmaFile[] }>(
+    // Check cache first
+    const cachedFiles = FigmaCache.get<{ files: FigmaFile[] }>(`files_${projectId}`);
+    if (cachedFiles) {
+      console.log(`Returning cached files for project ${projectId}`);
+      return cachedFiles;
+    }
+
+    // Fetch from API
+    const filesResponse = await this.makeRequest<{ files: FigmaFile[] }>(
       `/projects/${projectId}/files`
     );
+
+    // Cache the files data
+    FigmaCache.set(`files_${projectId}`, filesResponse, CACHE_DURATION.FILES);
+
+    return filesResponse;
   }
 
   /**
@@ -95,10 +189,10 @@ export class FigmaClient {
     return this.makeRequest<{ images: Record<string, string> }>(
       `/images/${fileKey}?${params.toString()}`
     );
-  }
-  /**
+  }  /**
    * Get recent files (drafts) for the authenticated user
-   * Note: This is a simplified implementation as Figma's API access depends on your plan
+   * Note: Figma API doesn't provide a direct endpoint for user's recent files
+   * This method returns an empty array - files should come from team projects
    */
   async getRecentFiles(): Promise<FigmaDraft[]> {
     try {
@@ -106,35 +200,16 @@ export class FigmaClient {
       const user = await this.getUser();
       console.log("Fetching files for user:", user.handle);
 
-      // Note: The Figma API doesn't provide a direct way to list all files
-      // You typically need:
-      // 1. Specific file keys/URLs
-      // 2. Team access (requires team admin privileges)
-      // 3. Or use Figma's webhooks/plugins for file discovery
+      // Unfortunately, Figma API doesn't provide a direct way to list all user files
+      // The API requires specific access patterns:
+      // 1. Team project access (requires team membership)
+      // 2. Specific file keys/URLs (requires knowing the file beforehand)
+      // 3. Organization access (enterprise features)
 
-      // For demonstration, return some example files with proper Figma URL structure
-      const mockDrafts: FigmaDraft[] = [
-        {
-          key: "sample-file-key-1",
-          name: "Mi Primer Diseño",
-          thumbnail_url: undefined, // Thumbnails require specific API calls with file keys
-          last_modified: new Date(Date.now() - 3600000).toISOString(),
-          role: "owner",
-          project_id: "sample-project-1",
-          project_name: "Proyectos Personales",
-        },
-        {
-          key: "sample-file-key-2",
-          name: "Componentes UI",
-          thumbnail_url: undefined,
-          last_modified: new Date(Date.now() - 7200000).toISOString(),
-          role: "editor",
-          project_id: "sample-project-2",
-          project_name: "Design System",
-        },
-      ];
-
-      return mockDrafts;
+      console.log("Note: Recent files must come from team projects or manual file addition");
+      
+      // Return empty array - real files should come from getTeamFiles()
+      return [];
     } catch (error) {
       console.error("Error fetching recent files:", error);
       throw error;
@@ -312,48 +387,17 @@ export class FigmaClient {
     const teamIdMatch = url.match(/figma\.com\/files\/team\/([0-9]+)/);
     return teamIdMatch ? teamIdMatch[1] : null;
   }
-
   /**
-   * Get all accessible files from multiple sources
+   * Get all accessible files from Figma (only real files, no mock data)
    */
   async getAllAccessibleFiles(): Promise<FigmaDraft[]> {
     try {
-      console.log("=== GETTING ALL ACCESSIBLE FILES ===");
-      const allFiles: FigmaDraft[] = [];
-
-      // 1. Get recent files from user
-      try {
-        console.log("1. Fetching recent files...");
-        const recentFiles = await this.getRecentFiles();
-        console.log(`Found ${recentFiles.length} recent files`);
-        allFiles.push(...recentFiles);
-      } catch (error) {
-        console.log("Could not fetch recent files:", error);
-      }
-
-      // 2. Get team files (existing logic)
-      try {
-        console.log("2. Fetching team files...");
-        const teamId = "958458320512591682";
-        const teamFiles = await this.getTeamFiles(teamId);
-        console.log(`Found ${teamFiles.length} team files`);
-
-        // Avoid duplicates by checking if file key already exists
-        const newTeamFiles = teamFiles.filter(
-          (teamFile) =>
-            !allFiles.some((existingFile) => existingFile.key === teamFile.key)
-        );
-        console.log(
-          `Adding ${newTeamFiles.length} new team files (${
-            teamFiles.length - newTeamFiles.length
-          } duplicates filtered)`
-        );
-        allFiles.push(...newTeamFiles);
-      } catch (error) {
-        console.log("Could not fetch team files:", error);
-      }
-
-      console.log(`=== TOTAL ACCESSIBLE FILES: ${allFiles.length} ===`);
+      console.log("=== GETTING ALL ACCESSIBLE FILES (REAL ONLY) ===");
+      
+      // Get all drafts from all accessible teams
+      const allFiles = await this.getAllUserDrafts();
+      
+      console.log(`=== TOTAL REAL FILES FOUND: ${allFiles.length} ===`);
       return allFiles;
     } catch (error) {
       console.error("Error getting all accessible files:", error);
@@ -385,6 +429,123 @@ export class FigmaClient {
     } catch (error) {
       console.error("Error getting user teams:", error);
       return [];
+    }
+  }
+
+  /**
+   * Get all teams accessible to the current user
+   * Note: Figma API doesn't provide a direct endpoint to list user teams
+   * This attempts to get teams from user profile or known team IDs
+   */
+  async getUserAccessibleTeams(): Promise<{ id: string; name: string }[]> {
+    try {
+      console.log("=== GETTING USER ACCESSIBLE TEAMS ===");
+      
+      // Get user info to extract team information
+      const user = await this.getUser();
+      console.log("User profile data:", JSON.stringify(user, null, 2));
+      
+      // Known teams from URL or configuration
+      const knownTeams = [
+        {
+          id: "958458320512591682",
+          name: "Your Team (from URL)"
+        }
+      ];
+
+      // Try to extract team IDs from user data if available
+      // Figma user response might contain team information in various formats
+      const userTeamIds: string[] = [];
+      
+      // Check if user object has team information
+      if (user && typeof user === 'object') {
+        // Look for team references in user object
+        const userStr = JSON.stringify(user);
+        const teamMatches = userStr.match(/["\']?team["\']?\s*:\s*["\']?(\d+)["\']?/gi);
+        if (teamMatches) {
+          teamMatches.forEach(match => {
+            const idMatch = match.match(/(\d+)/);
+            if (idMatch && idMatch[1] && !userTeamIds.includes(idMatch[1])) {
+              userTeamIds.push(idMatch[1]);
+            }
+          });
+        }
+      }
+
+      // Add discovered team IDs to known teams
+      userTeamIds.forEach(teamId => {
+        if (!knownTeams.some(team => team.id === teamId)) {
+          knownTeams.push({
+            id: teamId,
+            name: `Team ${teamId} (auto-detected)`
+          });
+        }
+      });
+
+      console.log(`Testing access to ${knownTeams.length} teams:`, knownTeams.map(t => t.name));
+
+      // Validate that we can access each team
+      const accessibleTeams: { id: string; name: string }[] = [];
+      
+      for (const team of knownTeams) {
+        try {
+          console.log(`Testing access to team: ${team.name} (${team.id})`);
+          const projects = await this.getTeamProjects(team.id);
+          console.log(`✅ Access confirmed for team ${team.name}: ${projects.projects.length} projects`);
+          
+          // Update team name with project count
+          accessibleTeams.push({
+            ...team,
+            name: `${team.name} (${projects.projects.length} projects)`
+          });
+        } catch (error) {
+          console.log(`❌ No access to team ${team.name}:`, error);
+        }
+      }
+
+      console.log(`Found ${accessibleTeams.length} accessible teams`);
+      return accessibleTeams;
+    } catch (error) {
+      console.error("Error getting user accessible teams:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all drafts from all accessible teams
+   */
+  async getAllUserDrafts(): Promise<FigmaDraft[]> {
+    try {
+      console.log("=== GETTING ALL USER DRAFTS ===");
+      const allDrafts: FigmaDraft[] = [];
+      
+      // Get all accessible teams
+      const teams = await this.getUserAccessibleTeams();
+      
+      for (const team of teams) {
+        try {
+          console.log(`Getting files from team: ${team.name}`);
+          const teamFiles = await this.getTeamFiles(team.id);
+          
+          // Mark files with team information
+          const teamDrafts = teamFiles.map(file => ({
+            ...file,
+            team_id: team.id,
+            team_name: team.name
+          }));
+          
+          allDrafts.push(...teamDrafts);
+          console.log(`Added ${teamFiles.length} files from team ${team.name}`);
+        } catch (error) {
+          console.error(`Error getting files from team ${team.name}:`, error);
+        }
+      }
+      
+      console.log(`=== TOTAL USER DRAFTS: ${allDrafts.length} ===`);
+      return allDrafts;
+    } catch (error) {
+      console.error("Error getting all user drafts:", error);
+      throw error;
     }
   }
 }
