@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FigmaDraft } from "@/types/figma";
 import DraftCard from "@/components/draft-card";
 import LoadingSpinner from "@/components/loading-spinner";
@@ -12,49 +12,50 @@ export default function FigmaDrafts() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { userFiles, loading: userFilesLoading } = useUserFiles();
+  const fetchDrafts = useCallback(
+    async (query?: string) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const fetchDrafts = async (query?: string) => {
-    try {
-      setLoading(true);
-      setError(null);
+        const url = query
+          ? `/api/figma/drafts?q=${encodeURIComponent(query)}`
+          : "/api/figma/drafts";
 
-      const url = query
-        ? `/api/figma/drafts?q=${encodeURIComponent(query)}`
-        : "/api/figma/drafts";
+        const response = await fetch(url);
+        const data = await response.json();
 
-      const response = await fetch(url);
-      const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Error al cargar los drafts");
+        }
 
-      if (!response.ok) {
-        throw new Error(data.error || "Error al cargar los drafts");
+        // Combine API drafts with user files
+        const apiDrafts = data.drafts || [];
+        const combinedDrafts = [
+          ...userFiles.map((file) => ({
+            ...file,
+            project_name: file.project_name || "Mis Archivos",
+          })),
+          ...apiDrafts.filter(
+            (draft: FigmaDraft) =>
+              !userFiles.some((userFile) => userFile.key === draft.key)
+          ),
+        ];
+
+        setDrafts(combinedDrafts);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error desconocido");
+      } finally {
+        setLoading(false);
       }
-
-      // Combine API drafts with user files
-      const apiDrafts = data.drafts || [];
-      const combinedDrafts = [
-        ...userFiles.map((file) => ({
-          ...file,
-          project_name: file.project_name || "Mis Archivos",
-        })),
-        ...apiDrafts.filter(
-          (draft: FigmaDraft) =>
-            !userFiles.some((userFile) => userFile.key === draft.key)
-        ),
-      ];
-
-      setDrafts(combinedDrafts);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    },
+    [userFiles]
+  );
   useEffect(() => {
     if (!userFilesLoading) {
       fetchDrafts();
     }
-  }, [userFilesLoading, userFiles]);
+  }, [userFilesLoading, userFiles, fetchDrafts]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

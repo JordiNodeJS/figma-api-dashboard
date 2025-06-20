@@ -3,7 +3,9 @@ import { FigmaClient } from "@/lib/figma-client";
 
 export async function GET(request: NextRequest) {
   try {
-    const accessToken = process.env.FIGMA_ACCESS_TOKEN;
+    // First check for client token in headers
+    const clientToken = request.headers.get("x-figma-token");
+    const accessToken = clientToken || process.env.FIGMA_ACCESS_TOKEN;
 
     if (!accessToken) {
       return NextResponse.json(

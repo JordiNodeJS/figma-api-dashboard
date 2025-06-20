@@ -3,6 +3,33 @@ import { FigmaClient } from "@/lib/figma-client";
 
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+    const { url, token } = body;
+
+    // If token is provided, verify the token
+    if (token) {
+      try {
+        const figmaClient = new FigmaClient(token);
+        const user = await figmaClient.getUser();
+
+        return NextResponse.json({
+          valid: true,
+          user: {
+            id: user.id,
+            handle: user.handle,
+            email: user.email,
+          },
+        });
+      } catch (error) {
+        console.error("Error verifying Figma token:", error);
+        return NextResponse.json(
+          { error: "Invalid token or unauthorized access" },
+          { status: 401 }
+        );
+      }
+    }
+
+    // Original file verification logic
     const accessToken = process.env.FIGMA_ACCESS_TOKEN;
 
     if (!accessToken) {
@@ -11,8 +38,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    const { url } = await request.json();
 
     if (!url) {
       return NextResponse.json(

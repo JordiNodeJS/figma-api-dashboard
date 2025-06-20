@@ -5,6 +5,8 @@ import { FigmaDraft } from "@/types/figma";
 import DraftCard from "@/components/draft-card";
 import LoadingSpinner from "@/components/loading-spinner";
 import { useUserFiles } from "@/hooks/use-user-files";
+import { useFigmaToken } from "@/hooks/use-figma-token";
+import FigmaTokenSetup from "@/components/figma-token-setup";
 
 export default function FigmaDrafts() {
   const [drafts, setDrafts] = useState<FigmaDraft[]>([]);
@@ -12,6 +14,8 @@ export default function FigmaDrafts() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { userFiles, loading: userFilesLoading } = useUserFiles();
+  const { token, isLoading: tokenLoading, hasToken } = useFigmaToken();
+
   const fetchDrafts = useCallback(
     async (query?: string) => {
       try {
@@ -22,7 +26,16 @@ export default function FigmaDrafts() {
           ? `/api/figma/drafts?q=${encodeURIComponent(query)}`
           : "/api/figma/drafts";
 
-        const response = await fetch(url);
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
+
+        // Add token to headers if available
+        if (token) {
+          headers["x-figma-token"] = token;
+        }
+
+        const response = await fetch(url, { headers });
         const data = await response.json();
 
         if (!response.ok) {
@@ -49,13 +62,14 @@ export default function FigmaDrafts() {
         setLoading(false);
       }
     },
-    [userFiles]
+    [userFiles, token]
   );
+
   useEffect(() => {
-    if (!userFilesLoading) {
+    if (!userFilesLoading && !tokenLoading && hasToken) {
       fetchDrafts();
     }
-  }, [userFilesLoading, userFiles, fetchDrafts]);
+  }, [userFilesLoading, tokenLoading, userFiles, fetchDrafts, hasToken]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,60 +82,97 @@ export default function FigmaDrafts() {
       (draft.project_name &&
         draft.project_name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  // Show loading while token is being loaded
+  if (tokenLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+  // Show token setup only if no token is available (neither client nor server)
+  if (!hasToken) {
+    return <FigmaTokenSetup />;
+  }
+
   return (
     <div className="space-y-6">
-      {/* Search */}
-      <form onSubmit={handleSearch} className="flex gap-4">
-        <div className="flex-1">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar drafts..."
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-        <button
-          type="submit"
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+      {" "}
+      {/* Search and Actions */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <form onSubmit={handleSearch} className="flex gap-4 flex-1">
+          <div className="flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar drafts..."
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             />
-          </svg>
-          Buscar
-        </button>
-        <button
-          type="button"
-          onClick={() => fetchDrafts()}
-          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          </div>
+          <button
+            type="submit"
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          Actualizar
-        </button>
-      </form>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            Buscar
+          </button>
+          <button
+            type="button"
+            onClick={() => fetchDrafts()}
+            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            Actualizar
+          </button>
+        </form>
 
+        {/* Add Files Button */}
+        <a
+          href="/discovery"
+          className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center gap-2 justify-center whitespace-nowrap"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+            />
+          </svg>
+          Añadir Más Archivos
+        </a>
+      </div>
       {/* Info Alert */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <div className="flex items-start gap-3">
@@ -140,24 +191,32 @@ export default function FigmaDrafts() {
           </svg>
           <div className="text-sm">
             <p className="text-blue-800 dark:text-blue-200 font-medium mb-1">
-              Información sobre el acceso a archivos
+              ¿No ves todos tus archivos?
             </p>
-            <p className="text-blue-700 dark:text-blue-300">
-              Para ver tus archivos reales de Figma, usa el botón &quot;Añadir
-              Archivos&quot; para agregar URLs específicas de tus proyectos. Los
-              archivos mostrados sin agregar son ejemplos de demostración.
-            </p>
+            <div className="text-blue-700 dark:text-blue-300 space-y-1">
+              <p>
+                • Esta vista muestra archivos de proyectos organizados en tu
+                equipo de Figma
+              </p>
+              <p>• Los archivos personales o drafts pueden no aparecer aquí</p>
+              <p>
+                • Usa <strong>&quot;Añadir Archivos&quot;</strong> para agregar
+                archivos específicos por URL
+              </p>
+              <p>
+                • Los archivos agregados manualmente aparecerán junto con los
+                del equipo
+              </p>
+            </div>
           </div>
         </div>
       </div>
-
       {/* Loading State */}
       {loading && (
         <div className="flex justify-center py-12">
           <LoadingSpinner size="lg" />
         </div>
       )}
-
       {/* Error State */}
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
@@ -182,7 +241,31 @@ export default function FigmaDrafts() {
           <p className="text-red-700 dark:text-red-300 mt-1">{error}</p>
         </div>
       )}
-
+      {/* Results Summary */}
+      {!loading && !error && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            {searchQuery ? (
+              <>
+                Mostrando {filteredDrafts.length} de {drafts.length} archivos
+                para &quot;{searchQuery}&quot;
+              </>
+            ) : (
+              <>
+                {drafts.length} archivo{drafts.length !== 1 ? "s" : ""}{" "}
+                encontrado{drafts.length !== 1 ? "s" : ""} del equipo
+                {userFiles.length > 0 && (
+                  <>
+                    {" "}
+                    + {userFiles.length} agregado
+                    {userFiles.length !== 1 ? "s" : ""} manualmente
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
       {/* Drafts Grid */}
       {!loading && !error && (
         <>

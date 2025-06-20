@@ -3,6 +3,7 @@
 import { useState } from "react";
 import FigmaDrafts from "@/components/figma-drafts";
 import FigmaProjects from "@/components/figma-projects";
+import FigmaTokenStatus from "@/components/figma-token-status";
 
 type TabType = "drafts" | "projects";
 
@@ -17,7 +18,8 @@ export default function Home() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Figma Cursor
           </h1>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
+            <FigmaTokenStatus />
             <a
               href="/discovery"
               className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center gap-2"

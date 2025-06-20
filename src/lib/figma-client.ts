@@ -241,23 +241,30 @@ export class FigmaClient {
 
   /**
    * Get team projects and their files automatically
-   */
-  async getTeamFiles(teamId: string): Promise<FigmaDraft[]> {
+   */ async getTeamFiles(teamId: string): Promise<FigmaDraft[]> {
     try {
-      console.log(`Fetching files for team: ${teamId}`);
+      console.log(`=== FIGMA CLIENT: Fetching files for team: ${teamId} ===`);
 
       // First, get all projects for the team
       const projectsResponse = await this.getTeamProjects(teamId);
       const projects = projectsResponse.projects;
 
-      console.log(`Found ${projects.length} projects in team`);
+      console.log(
+        `Found ${projects.length} projects in team:`,
+        projects.map((p) => p.name)
+      );
 
       const allFiles: FigmaDraft[] = [];
 
       // For each project, get all files
       for (const project of projects) {
         try {
+          console.log(
+            `Fetching files for project: ${project.name} (ID: ${project.id})`
+          );
           const filesResponse = await this.getProjectFiles(project.id);
+
+          console.log(`Raw files response for ${project.name}:`, filesResponse);
 
           // Convert files to FigmaDraft format
           const projectFiles: FigmaDraft[] = filesResponse.files.map(
@@ -273,7 +280,8 @@ export class FigmaClient {
           );
 
           console.log(
-            `Found ${projectFiles.length} files in project: ${project.name}`
+            `Found ${projectFiles.length} files in project: ${project.name}`,
+            projectFiles.map((f) => f.name)
           );
           allFiles.push(...projectFiles);
         } catch (projectError) {
@@ -285,7 +293,11 @@ export class FigmaClient {
         }
       }
 
-      console.log(`Total files found: ${allFiles.length}`);
+      console.log(`=== TOTAL FILES FOUND: ${allFiles.length} ===`);
+      console.log(
+        "All files:",
+        allFiles.map((f) => ({ name: f.name, project: f.project_name }))
+      );
       return allFiles;
     } catch (error) {
       console.error("Error fetching team files:", error);
@@ -299,5 +311,80 @@ export class FigmaClient {
   static extractTeamId(url: string): string | null {
     const teamIdMatch = url.match(/figma\.com\/files\/team\/([0-9]+)/);
     return teamIdMatch ? teamIdMatch[1] : null;
+  }
+
+  /**
+   * Get all accessible files from multiple sources
+   */
+  async getAllAccessibleFiles(): Promise<FigmaDraft[]> {
+    try {
+      console.log("=== GETTING ALL ACCESSIBLE FILES ===");
+      const allFiles: FigmaDraft[] = [];
+
+      // 1. Get recent files from user
+      try {
+        console.log("1. Fetching recent files...");
+        const recentFiles = await this.getRecentFiles();
+        console.log(`Found ${recentFiles.length} recent files`);
+        allFiles.push(...recentFiles);
+      } catch (error) {
+        console.log("Could not fetch recent files:", error);
+      }
+
+      // 2. Get team files (existing logic)
+      try {
+        console.log("2. Fetching team files...");
+        const teamId = "958458320512591682";
+        const teamFiles = await this.getTeamFiles(teamId);
+        console.log(`Found ${teamFiles.length} team files`);
+
+        // Avoid duplicates by checking if file key already exists
+        const newTeamFiles = teamFiles.filter(
+          (teamFile) =>
+            !allFiles.some((existingFile) => existingFile.key === teamFile.key)
+        );
+        console.log(
+          `Adding ${newTeamFiles.length} new team files (${
+            teamFiles.length - newTeamFiles.length
+          } duplicates filtered)`
+        );
+        allFiles.push(...newTeamFiles);
+      } catch (error) {
+        console.log("Could not fetch team files:", error);
+      }
+
+      console.log(`=== TOTAL ACCESSIBLE FILES: ${allFiles.length} ===`);
+      return allFiles;
+    } catch (error) {
+      console.error("Error getting all accessible files:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all teams accessible to the user
+   */
+  async getUserTeams(): Promise<{ id: string; name: string }[]> {
+    try {
+      console.log("=== GETTING USER TEAMS ===");
+
+      // First get user info to see what teams they belong to
+      const user = await this.getUser();
+      console.log("User info:", user);
+
+      // Unfortunately, Figma API doesn't provide a direct way to list all teams
+      // The user object might contain team information, but it's limited
+
+      // For now, return the hardcoded team we know about
+      return [
+        {
+          id: "958458320512591682",
+          name: "Your Team (from URL)",
+        },
+      ];
+    } catch (error) {
+      console.error("Error getting user teams:", error);
+      return [];
+    }
   }
 }
