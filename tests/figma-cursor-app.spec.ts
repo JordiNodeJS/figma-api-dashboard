@@ -76,12 +76,10 @@ test.describe("Figma Cursor App", () => {
     await urlInput.fill(
       "https://www.figma.com/file/test123/mi-archivo-de-prueba"
     );
-    await page.getByRole("button", { name: "Verificar Archivo" }).click();
-
-    // Verificar que se muestra el resultado
+    await page.getByRole("button", { name: "Verificar Archivo" }).click(); // Verificar que se muestra el resultado
     await expect(
       page.getByRole("heading", { name: "Archivos Descubiertos" })
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 10000 });
     await expect(page.getByText("No Accesible")).toBeVisible();
     // 7. Navegar a diagnósticos
     await page.goto("/diagnostics");

@@ -196,9 +196,10 @@ export default function FigmaDrafts() {
                   Información sobre el acceso a archivos
                 </p>
                 <p className="text-blue-700 dark:text-blue-300">
-                  Para ver tus archivos reales de Figma, usa el botón "Añadir
-                  Archivos" para agregar URLs específicas de tus proyectos. Los
-                  archivos mostrados sin agregar son ejemplos de demostración.
+                  Para ver tus archivos reales de Figma, usa el botón
+                  &quot;Añadir Archivos&quot; para agregar URLs específicas de
+                  tus proyectos. Los archivos mostrados sin agregar son ejemplos
+                  de demostración.
                 </p>
               </div>
             </div>
