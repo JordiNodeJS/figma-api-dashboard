@@ -1,0 +1,210 @@
+# Figma Cursor - AI Rules for Cursor IDE
+
+## Project Overview
+
+This is a Next.js 15 application with TypeScript, Tailwind CSS 4, and Figma integration features. Follow modern React patterns with App Router and server components.
+
+## Technology Stack
+
+- **Framework**: Next.js 15.3.4 with App Router and Turbopack
+- **Language**: TypeScript 5+ with strict type checking
+- **Styling**: Tailwind CSS 4 with PostCSS integration
+- **React**: React 19 with latest patterns and hooks
+- **Package Manager**: Support for npm, yarn, pnpm, and bun
+
+## Code Standards
+
+### TypeScript Rules
+
+- Use TypeScript for all components and utilities with explicit type annotations
+- Prefer `interface` over `type` for object definitions
+- Use strict mode with `noImplicitAny` and `strictNullChecks`
+- Always define return types for functions
+- Use generic types for reusable components
+- Implement proper error handling with typed errors
+
+### React/Next.js Patterns
+
+- Prefer Server Components by default
+- Use "use client" directive only when necessary (state, events, browser APIs)
+- Follow Next.js 15 App Router conventions and file structure
+- Use React 19 features like concurrent features and server actions
+- Implement proper prop validation with TypeScript interfaces
+- Use Server Actions for form handling and data mutations
+
+### Component Structure
+
+```tsx
+interface ComponentProps {
+  // Define props with proper types
+  id: string;
+  title: string;
+  children?: React.ReactNode;
+}
+
+/**
+ * Component description
+ * @param props - Component props
+ */
+export default function Component({ id, title, children }: ComponentProps) {
+  return <div className="tailwind-classes">{children}</div>;
+}
+```
+
+### Styling Guidelines
+
+- Use Tailwind CSS 4 utility classes consistently
+- Implement responsive design with mobile-first approach
+- Follow design system principles with consistent spacing and typography
+- Use CSS variables for theming and dark mode support
+- Prefer Tailwind's built-in classes over custom CSS
+- Use semantic color classes (primary, secondary, accent, destructive)
+
+### File Organization
+
+- Use kebab-case for directories and files
+- Component files should use PascalCase with .tsx extension
+- Place components in `src/components/` directory
+- Group related components in feature-based directories
+- Create index.ts files for component groups
+- Use descriptive names that reflect component purpose
+
+### Performance Best Practices
+
+- Use Next.js Image component for optimized images
+- Implement proper code splitting with dynamic imports
+- Use Server Components for data fetching when possible
+- Optimize bundle size with proper tree shaking
+- Implement caching strategies for API routes and data fetching
+- Use React.memo() for expensive components
+- Avoid unnecessary re-renders with useCallback and useMemo
+
+### Data Fetching Patterns
+
+- Use Server Components for initial data loading
+- Implement Server Actions for mutations and form submissions
+- Use proper error handling with try-catch blocks
+- Implement loading states and error boundaries
+- Cache data appropriately using Next.js caching mechanisms
+
+### Security Practices
+
+- Never expose sensitive API keys or secrets to the client
+- Use environment variables with NEXT*PUBLIC* prefix only for public data
+- Implement proper input validation and sanitization
+- Use Content Security Policy (CSP) headers
+- Follow OWASP security guidelines for web applications
+- Validate all user inputs before processing
+- Implement proper authentication and authorization
+
+### Error Handling
+
+- Use structured error responses
+- Log errors appropriately for debugging
+- Provide meaningful error messages to users
+- Implement error boundaries for React components
+- Handle async operations with proper try-catch blocks
+- Use Next.js error pages (error.tsx, not-found.tsx)
+
+### Testing Requirements
+
+- Write unit tests for components and utilities
+- Implement integration tests for critical user flows
+- Use Jest and Testing Library for component testing
+- Follow AAA pattern (Arrange, Act, Assert)
+- Test accessibility with testing-library/jest-dom
+- Mock external dependencies properly
+
+### Accessibility Standards
+
+- Include proper ARIA attributes
+- Use semantic HTML elements
+- Implement keyboard navigation support
+- Add proper focus management
+- Include alt text for images
+- Ensure color contrast ratios meet WCAG guidelines
+- Test with screen readers
+
+### Figma Integration
+
+- Implement Figma API integration patterns following best practices
+- Use proper authentication and authorization for Figma API calls
+- Handle Figma design tokens and component synchronization
+- Implement proper error handling for Figma API interactions
+- Cache Figma API responses appropriately
+- Use environment variables for Figma tokens
+
+## Code Generation Rules
+
+### When creating components:
+
+1. Always ask for component name, props, and functionality if not provided
+2. Use TypeScript with explicit type definitions
+3. Follow the component structure pattern above
+4. Include proper JSDoc comments
+5. Implement responsive design with Tailwind CSS
+6. Add accessibility attributes
+7. Use semantic HTML elements
+8. Export as default export
+
+### When creating API routes:
+
+1. Use Next.js 15 App Router conventions (route.ts files)
+2. Implement proper TypeScript types for requests and responses
+3. Include input validation with schemas (Zod recommended)
+4. Use structured error responses
+5. Implement proper HTTP status codes
+6. Add security headers and CORS when needed
+
+### When implementing forms:
+
+1. Use Server Actions for form submissions
+2. Implement client-side and server-side validation
+3. Use proper TypeScript types for form data
+4. Include loading states and error handling
+5. Implement progressive enhancement
+6. Add proper accessibility attributes
+
+### When working with data:
+
+1. Use Server Components for initial data fetching
+2. Implement proper caching strategies
+3. Use parallel data fetching to reduce waterfalls
+4. Handle loading and error states
+5. Implement optimistic updates when appropriate
+
+## Development Workflow
+
+- Use TypeScript strict mode for enhanced type safety
+- Run `npm run dev` with Turbopack for fast development
+- Use proper Git commit conventions
+- Follow the existing code style in the repository
+- Use ESLint with Next.js recommended configuration
+- Format code with Prettier
+- Run tests before committing changes
+
+## Never Do
+
+- Don't use any CSS-in-JS libraries (styled-components, emotion, etc.)
+- Don't use class components (use functional components only)
+- Don't expose sensitive data to the client
+- Don't skip TypeScript types or use `any` type
+- Don't ignore accessibility requirements
+- Don't create custom CSS classes (use Tailwind utilities)
+- Don't call APIs directly from Server Components (use proper data fetching patterns)
+- Don't skip error handling in async operations
+
+## Always Do
+
+- Use TypeScript for all code
+- Follow Next.js 15 patterns and conventions
+- Implement proper error boundaries
+- Add loading states for async operations
+- Use semantic HTML elements
+- Include proper ARIA attributes
+- Implement responsive design
+- Follow the established file organization
+- Add proper JSDoc comments
+- Use proper caching strategies
+- Validate all user inputs
+- Handle errors gracefully
