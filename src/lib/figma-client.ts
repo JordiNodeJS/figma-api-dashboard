@@ -128,19 +128,25 @@ export class FigmaClient {
    */
   async getTeamProjects(teamId: string): Promise<{ projects: FigmaProject[] }> {
     // Check cache first
-    const cachedProjects = FigmaCache.get<{ projects: FigmaProject[] }>(`projects_${teamId}`);
+    const cachedProjects = FigmaCache.get<{ projects: FigmaProject[] }>(
+      `projects_${teamId}`
+    );
     if (cachedProjects) {
       console.log(`Returning cached projects for team ${teamId}`);
       return cachedProjects;
     }
 
     // Fetch from API
-    const projectsResponse = await this.makeRequest<{ projects: FigmaProject[] }>(
-      `/teams/${teamId}/projects`
-    );
+    const projectsResponse = await this.makeRequest<{
+      projects: FigmaProject[];
+    }>(`/teams/${teamId}/projects`);
 
     // Cache the projects data
-    FigmaCache.set(`projects_${teamId}`, projectsResponse, CACHE_DURATION.PROJECTS);
+    FigmaCache.set(
+      `projects_${teamId}`,
+      projectsResponse,
+      CACHE_DURATION.PROJECTS
+    );
 
     return projectsResponse;
   }
@@ -150,7 +156,9 @@ export class FigmaClient {
    */
   async getProjectFiles(projectId: string): Promise<{ files: FigmaFile[] }> {
     // Check cache first
-    const cachedFiles = FigmaCache.get<{ files: FigmaFile[] }>(`files_${projectId}`);
+    const cachedFiles = FigmaCache.get<{ files: FigmaFile[] }>(
+      `files_${projectId}`
+    );
     if (cachedFiles) {
       console.log(`Returning cached files for project ${projectId}`);
       return cachedFiles;
@@ -189,30 +197,160 @@ export class FigmaClient {
     return this.makeRequest<{ images: Record<string, string> }>(
       `/images/${fileKey}?${params.toString()}`
     );
-  }  /**
+  }
+  /**
    * Get recent files (drafts) for the authenticated user
    * Note: Figma API doesn't provide a direct endpoint for user's recent files
    * This method returns an empty array - files should come from team projects
    */
   async getRecentFiles(): Promise<FigmaDraft[]> {
     try {
+      console.log("=== ATTEMPTING TO GET RECENT FILES ===");
+
       // Get user information first
       const user = await this.getUser();
-      console.log("Fetching files for user:", user.handle);
+      console.log("Fetching recent files for user:", user.handle, user.id);
 
-      // Unfortunately, Figma API doesn't provide a direct way to list all user files
-      // The API requires specific access patterns:
-      // 1. Team project access (requires team membership)
-      // 2. Specific file keys/URLs (requires knowing the file beforehand)
-      // 3. Organization access (enterprise features)
+      const recentFiles: FigmaDraft[] = [];
 
-      console.log("Note: Recent files must come from team projects or manual file addition");
-      
-      // Return empty array - real files should come from getTeamFiles()
-      return [];
+      // Try multiple potential endpoints for recent files
+      const potentialEndpoints = [
+        `/users/${user.id}/recent_files`,
+        `/users/me/recent_files`,
+        `/me/recent_files`,
+        `/recent_files`,
+        `/files/recent`,
+        `/users/${user.id}/files`,
+        `/users/me/files`,
+        `/me/files`,
+      ];
+
+      for (const endpoint of potentialEndpoints) {
+        try {
+          console.log(`Trying endpoint: ${endpoint}`);
+          const response = await this.makeRequest<Record<string, unknown>>(
+            endpoint
+          );
+          console.log(`✅ SUCCESS: ${endpoint}`, response);
+
+          // If we get any files, try to parse them
+          if (
+            response &&
+            (response.files || response.recent_files || response.data)
+          ) {
+            const files =
+              response.files || response.recent_files || response.data;
+            if (Array.isArray(files)) {
+              files.forEach((file: Record<string, unknown>) => {
+                if (
+                  typeof file.key === "string" &&
+                  typeof file.name === "string"
+                ) {
+                  recentFiles.push({
+                    key: file.key,
+                    name: file.name,
+                    thumbnail_url:
+                      typeof file.thumbnail_url === "string"
+                        ? file.thumbnail_url
+                        : typeof file.thumbnailUrl === "string"
+                        ? file.thumbnailUrl
+                        : undefined,
+                    last_modified:
+                      typeof file.last_modified === "string"
+                        ? file.last_modified
+                        : typeof file.lastModified === "string"
+                        ? file.lastModified
+                        : typeof file.updated_at === "string"
+                        ? file.updated_at
+                        : "",
+                    role: typeof file.role === "string" ? file.role : "viewer",
+                    project_name:
+                      typeof file.project_name === "string"
+                        ? file.project_name
+                        : "Recent Files",
+                  });
+                }
+              });
+            }
+          }
+
+          // If we found files in this endpoint, use them
+          if (recentFiles.length > 0) {
+            console.log(
+              `Found ${recentFiles.length} recent files from ${endpoint}`
+            );
+            return recentFiles;
+          }
+        } catch (error) {
+          console.log(`❌ FAILED: ${endpoint} -`, (error as Error).message);
+        }
+      }
+
+      // Try to get user activity/feed endpoints
+      const activityEndpoints = [
+        `/users/${user.id}/activity`,
+        `/me/activity`,
+        `/activity`,
+        `/feed`,
+        `/users/${user.id}/feed`,
+      ];
+
+      for (const endpoint of activityEndpoints) {
+        try {
+          console.log(`Trying activity endpoint: ${endpoint}`);
+          const response = await this.makeRequest<Record<string, unknown>>(
+            endpoint
+          );
+          console.log(`✅ ACTIVITY SUCCESS: ${endpoint}`, response);
+
+          // Parse activity for file references
+          if (response && Array.isArray(response.activity)) {
+            response.activity.forEach((item: Record<string, unknown>) => {
+              if (
+                item.file &&
+                typeof item.file === "object" &&
+                item.file !== null
+              ) {
+                const fileObj = item.file as Record<string, unknown>;
+                if (typeof fileObj.key === "string") {
+                  recentFiles.push({
+                    key: fileObj.key,
+                    name:
+                      typeof fileObj.name === "string"
+                        ? fileObj.name
+                        : "Untitled",
+                    thumbnail_url:
+                      typeof fileObj.thumbnail_url === "string"
+                        ? fileObj.thumbnail_url
+                        : undefined,
+                    last_modified:
+                      typeof item.created_at === "string"
+                        ? item.created_at
+                        : typeof item.updated_at === "string"
+                        ? item.updated_at
+                        : "",
+                    role: "viewer",
+                    project_name: "Recent Activity",
+                  });
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.log(
+            `❌ ACTIVITY FAILED: ${endpoint} -`,
+            (error as Error).message
+          );
+        }
+      }
+
+      console.log(
+        `=== RECENT FILES SEARCH COMPLETE: ${recentFiles.length} files found ===`
+      );
+      return recentFiles;
     } catch (error) {
-      console.error("Error fetching recent files:", error);
-      throw error;
+      console.error("Error in experimental recent files search:", error);
+      return [];
     }
   }
 
@@ -393,10 +531,10 @@ export class FigmaClient {
   async getAllAccessibleFiles(): Promise<FigmaDraft[]> {
     try {
       console.log("=== GETTING ALL ACCESSIBLE FILES (REAL ONLY) ===");
-      
+
       // Get all drafts from all accessible teams
       const allFiles = await this.getAllUserDrafts();
-      
+
       console.log(`=== TOTAL REAL FILES FOUND: ${allFiles.length} ===`);
       return allFiles;
     } catch (error) {
@@ -440,30 +578,32 @@ export class FigmaClient {
   async getUserAccessibleTeams(): Promise<{ id: string; name: string }[]> {
     try {
       console.log("=== GETTING USER ACCESSIBLE TEAMS ===");
-      
+
       // Get user info to extract team information
       const user = await this.getUser();
       console.log("User profile data:", JSON.stringify(user, null, 2));
-      
+
       // Known teams from URL or configuration
       const knownTeams = [
         {
           id: "958458320512591682",
-          name: "Your Team (from URL)"
-        }
+          name: "Your Team (from URL)",
+        },
       ];
 
       // Try to extract team IDs from user data if available
       // Figma user response might contain team information in various formats
       const userTeamIds: string[] = [];
-      
+
       // Check if user object has team information
-      if (user && typeof user === 'object') {
+      if (user && typeof user === "object") {
         // Look for team references in user object
         const userStr = JSON.stringify(user);
-        const teamMatches = userStr.match(/["\']?team["\']?\s*:\s*["\']?(\d+)["\']?/gi);
+        const teamMatches = userStr.match(
+          /["\']?team["\']?\s*:\s*["\']?(\d+)["\']?/gi
+        );
         if (teamMatches) {
-          teamMatches.forEach(match => {
+          teamMatches.forEach((match) => {
             const idMatch = match.match(/(\d+)/);
             if (idMatch && idMatch[1] && !userTeamIds.includes(idMatch[1])) {
               userTeamIds.push(idMatch[1]);
@@ -473,30 +613,35 @@ export class FigmaClient {
       }
 
       // Add discovered team IDs to known teams
-      userTeamIds.forEach(teamId => {
-        if (!knownTeams.some(team => team.id === teamId)) {
+      userTeamIds.forEach((teamId) => {
+        if (!knownTeams.some((team) => team.id === teamId)) {
           knownTeams.push({
             id: teamId,
-            name: `Team ${teamId} (auto-detected)`
+            name: `Team ${teamId} (auto-detected)`,
           });
         }
       });
 
-      console.log(`Testing access to ${knownTeams.length} teams:`, knownTeams.map(t => t.name));
+      console.log(
+        `Testing access to ${knownTeams.length} teams:`,
+        knownTeams.map((t) => t.name)
+      );
 
       // Validate that we can access each team
       const accessibleTeams: { id: string; name: string }[] = [];
-      
+
       for (const team of knownTeams) {
         try {
           console.log(`Testing access to team: ${team.name} (${team.id})`);
           const projects = await this.getTeamProjects(team.id);
-          console.log(`✅ Access confirmed for team ${team.name}: ${projects.projects.length} projects`);
-          
+          console.log(
+            `✅ Access confirmed for team ${team.name}: ${projects.projects.length} projects`
+          );
+
           // Update team name with project count
           accessibleTeams.push({
             ...team,
-            name: `${team.name} (${projects.projects.length} projects)`
+            name: `${team.name} (${projects.projects.length} projects)`,
           });
         } catch (error) {
           console.log(`❌ No access to team ${team.name}:`, error);
@@ -510,37 +655,56 @@ export class FigmaClient {
       return [];
     }
   }
-
   /**
-   * Get all drafts from all accessible teams
+   * Get all drafts from all accessible teams + recent files
    */
   async getAllUserDrafts(): Promise<FigmaDraft[]> {
     try {
       console.log("=== GETTING ALL USER DRAFTS ===");
       const allDrafts: FigmaDraft[] = [];
-      
-      // Get all accessible teams
+
+      // First, try to get recent files (experimental)
+      console.log("Attempting to get recent files...");
+      try {
+        const recentFiles = await this.getRecentFiles();
+        if (recentFiles.length > 0) {
+          console.log(`Found ${recentFiles.length} recent files!`);
+          allDrafts.push(...recentFiles);
+        } else {
+          console.log("No recent files found via API endpoints");
+        }
+      } catch (error) {
+        console.log("Recent files search failed:", error);
+      }
+
+      // Get all accessible teams (existing logic)
       const teams = await this.getUserAccessibleTeams();
-      
+
       for (const team of teams) {
         try {
           console.log(`Getting files from team: ${team.name}`);
           const teamFiles = await this.getTeamFiles(team.id);
-          
-          // Mark files with team information
-          const teamDrafts = teamFiles.map(file => ({
-            ...file,
-            team_id: team.id,
-            team_name: team.name
-          }));
-          
+
+          // Mark files with team information and avoid duplicates
+          const teamDrafts = teamFiles
+            .map((file) => ({
+              ...file,
+              team_id: team.id,
+              team_name: team.name,
+            }))
+            .filter(
+              (file) => !allDrafts.some((existing) => existing.key === file.key)
+            );
+
           allDrafts.push(...teamDrafts);
-          console.log(`Added ${teamFiles.length} files from team ${team.name}`);
+          console.log(
+            `Added ${teamDrafts.length} new files from team ${team.name}`
+          );
         } catch (error) {
           console.error(`Error getting files from team ${team.name}:`, error);
         }
       }
-      
+
       console.log(`=== TOTAL USER DRAFTS: ${allDrafts.length} ===`);
       return allDrafts;
     } catch (error) {

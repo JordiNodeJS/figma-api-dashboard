@@ -8,10 +8,10 @@ interface SyncStatusProps {
   isLoading?: boolean;
 }
 
-export default function SyncStatus({ 
-  lastSyncTime, 
-  isAutoSyncEnabled = false, 
-  isLoading = false 
+export default function SyncStatus({
+  lastSyncTime,
+  isAutoSyncEnabled = false,
+  isLoading = false,
 }: SyncStatusProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -25,14 +25,14 @@ export default function SyncStatus({
 
   const getTimeSinceSync = () => {
     if (!lastSyncTime) return null;
-    
+
     const diffMs = currentTime.getTime() - lastSyncTime.getTime();
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    
+
     if (diffMinutes < 1) return "hace menos de 1 minuto";
     if (diffMinutes === 1) return "hace 1 minuto";
     if (diffMinutes < 60) return `hace ${diffMinutes} minutos`;
-    
+
     const diffHours = Math.floor(diffMinutes / 60);
     if (diffHours === 1) return "hace 1 hora";
     return `hace ${diffHours} horas`;

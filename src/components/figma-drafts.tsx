@@ -156,6 +156,50 @@ export default function FigmaDrafts() {
     setIsAutoSyncEnabled(!isAutoSyncEnabled);
   };
 
+  const testRecentFiles = async () => {
+    try {
+      setError(null);
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["x-figma-token"] = token;
+      }
+
+      const response = await fetch("/api/figma/recent", { headers });
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.recentFiles && data.recentFiles.length > 0) {
+          alert(
+            `🎉 ¡Encontrados ${data.recentFiles.length} archivos recientes experimentales!\n\nEstos archivos se añadirán a tu lista.`
+          );
+
+          // Combine with existing drafts, avoiding duplicates
+          const newFiles = data.recentFiles.filter(
+            (newFile: FigmaDraft) =>
+              !drafts.some((existing) => existing.key === newFile.key)
+          );
+
+          if (newFiles.length > 0) {
+            setDrafts((prev) => [...prev, ...newFiles]);
+            setLastSyncTime(new Date());
+          }
+        } else {
+          alert(
+            "❌ No se encontraron archivos recientes a través de la búsqueda experimental.\n\nLa API de Figma no expone endpoints públicos para drafts personales."
+          );
+        }
+      } else {
+        alert(`Error en búsqueda experimental: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error testing recent files:", error);
+      alert("Error al probar la búsqueda experimental de archivos recientes");
+    }
+  };
+
   const filteredDrafts = drafts.filter(
     (draft) =>
       draft.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -178,131 +222,154 @@ export default function FigmaDrafts() {
 
   return (
     <div className="space-y-6">
-      {" "}        {/* Search and Actions */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <form onSubmit={handleSearch} className="flex gap-4 flex-1">
-            <div className="flex-1">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar drafts..."
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+      {" "}
+      {/* Search and Actions */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <form onSubmit={handleSearch} className="flex gap-4 flex-1">
+          <div className="flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar drafts..."
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+          <button
+            type="submit"
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
-            </div>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
+            </svg>
+            Buscar
+          </button>
+          <button
+            type="button"
+            onClick={handleManualSync}
+            disabled={loading}
+            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
+          >
+            <svg
+              className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              Buscar
-            </button>
-            <button
-              type="button"
-              onClick={handleManualSync}
-              disabled={loading}
-              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
-            >
-              <svg
-                className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              {loading ? 'Sincronizando...' : 'Sincronizar'}
-            </button>
-          </form>
-
-          {/* Auto-sync toggle */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggleAutoSync}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors duration-200 text-sm ${
-                isAutoSyncEnabled
-                  ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-300 dark:hover:bg-green-900/30'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            {loading ? "Sincronizando..." : "Sincronizar"}
+          </button>
+        </form>{" "}
+        {/* Auto-sync toggle */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleAutoSync}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors duration-200 text-sm ${
+              isAutoSyncEnabled
+                ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-300 dark:hover:bg-green-900/30"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+            }`}
+          >
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isAutoSyncEnabled ? "bg-green-500" : "bg-gray-400"
               }`}
-            >
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isAutoSyncEnabled ? 'bg-green-500' : 'bg-gray-400'
-                }`}
-              />
-              Auto-sync
-            </button>
+            />
+            Auto-sync
+          </button>
 
-            {/* Add Files Button */}
-            <a
-              href="/discovery"
-              className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center gap-2 justify-center whitespace-nowrap"
+          {/* Experimental Recent Files Button */}
+          <button
+            onClick={testRecentFiles}
+            className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors duration-200 text-sm bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:hover:bg-purple-900/30"
+            title="Probar búsqueda experimental de drafts personales"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              Añadir Más Archivos
-            </a>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+              />
+            </svg>
+            Experimental
+          </button>
+
+          {/* Add Files Button */}
+          <a
+            href="/discovery"
+            className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center gap-2 justify-center whitespace-nowrap"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
+            </svg>
+            Añadir Más Archivos
+          </a>
+        </div>
+      </div>
+      {/* Sync Status */}
+      {lastSyncTime && (
+        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-2">
+          <div className="flex items-center gap-2">
+            <svg
+              className={`w-4 h-4 ${
+                isAutoSyncEnabled ? "text-green-500" : "text-gray-400"
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>
+              Última sincronización: {lastSyncTime.toLocaleTimeString()}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {isAutoSyncEnabled && (
+              <span className="text-green-600 dark:text-green-400">
+                Auto-sync activo
+              </span>
+            )}
           </div>
         </div>
-
-        {/* Sync Status */}
-        {lastSyncTime && (
-          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-2">
-            <div className="flex items-center gap-2">
-              <svg
-                className={`w-4 h-4 ${isAutoSyncEnabled ? 'text-green-500' : 'text-gray-400'}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>
-                Última sincronización: {lastSyncTime.toLocaleTimeString()}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {isAutoSyncEnabled && (
-                <span className="text-green-600 dark:text-green-400">
-                  Auto-sync activo
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+      )}
       {/* Info Alert */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <div className="flex items-start gap-3">
@@ -318,25 +385,52 @@ export default function FigmaDrafts() {
               strokeWidth={2}
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
-          </svg>          <div className="text-sm">
+          </svg>{" "}
+          <div className="text-sm">
             <p className="text-blue-800 dark:text-blue-200 font-medium mb-1">
-              Sincronización automática con Figma
-            </p>
+              Limitaciones de la API de Figma
+            </p>{" "}
             <div className="text-blue-700 dark:text-blue-300 space-y-1">
               <p>
-                • Los archivos se sincronizan automáticamente cada 5 minutos desde todos tus equipos de Figma
+                • <strong>Solo archivos en equipos/proyectos:</strong> La API de
+                Figma solo permite acceder a archivos organizados en equipos
+                donde eres miembro
               </p>
               <p>
-                • La app detecta automáticamente equipos accesibles y consulta todos sus proyectos
+                • <strong>Drafts personales no accesibles:</strong> Los drafts
+                privados/personales no se pueden sincronizar automáticamente via
+                API oficial
               </p>
               <p>
-                • Usa <strong>&quot;Sincronizar&quot;</strong> para actualizar manualmente los archivos
+                • <strong>Búsqueda experimental:</strong> Usa el botón{" "}
+                <strong>&quot;Experimental&quot;</strong> para probar endpoints
+                no documentados
               </p>
               <p>
-                • Puedes desactivar la sincronización automática usando el botón &quot;Auto-sync&quot;
+                • <strong>Añadir manualmente:</strong> Usa{" "}
+                <strong>&quot;Añadir Más Archivos&quot;</strong> para agregar
+                drafts personales por URL
               </p>
-              <p>• Solo se muestran archivos reales de Figma, sin datos de ejemplo</p>
+              <p>
+                • <strong>Auto-sync activo:</strong> Los archivos disponibles se
+                sincronizan cada 5 minutos
+              </p>
             </div>
+            {drafts.length === 2 && (
+              <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                <p className="text-yellow-800 dark:text-yellow-200 font-medium text-xs">
+                  💡 <strong>¿Esperabas ver más archivos?</strong>
+                </p>
+                <p className="text-yellow-700 dark:text-yellow-300 text-xs mt-1">
+                  1. Prueba el botón <strong>&quot;Experimental&quot;</strong>{" "}
+                  para buscar drafts personales
+                  <br />
+                  2. Si tienes más drafts en Figma, ve a figma.com → copia las
+                  URLs → úsalas en{" "}
+                  <strong>&quot;Añadir Más Archivos&quot;</strong>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -368,35 +462,6 @@ export default function FigmaDrafts() {
             </span>
           </div>
           <p className="text-red-700 dark:text-red-300 mt-1">{error}</p>
-        </div>
-      )}
-      {/* Results Summary */}
-      {!loading && !error && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            {searchQuery ? (
-              <>
-                Mostrando {filteredDrafts.length} de {drafts.length} archivos
-                para &quot;{searchQuery}&quot;
-              </>            ) : (
-              <>
-                {drafts.length} archivo{drafts.length !== 1 ? "s" : ""}{" "}
-                sincronizado{drafts.length !== 1 ? "s" : ""} automáticamente desde Figma
-                {userFiles.length > 0 && (
-                  <>
-                    {" "}
-                    + {userFiles.length} agregado
-                    {userFiles.length !== 1 ? "s" : ""} manualmente
-                  </>
-                )}
-                {lastSyncTime && isAutoSyncEnabled && (
-                  <span className="ml-2 text-green-600 dark:text-green-400">
-                    • Auto-sync activo
-                  </span>
-                )}
-              </>
-            )}
-          </div>
         </div>
       )}
       {/* Drafts Grid */}
@@ -457,6 +522,93 @@ export default function FigmaDrafts() {
             </div>
           )}
         </>
+      )}
+      {/* Detailed sync stats */}
+      {!loading && !error && drafts.length > 0 && (
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {searchQuery ? (
+                <>
+                  Mostrando {filteredDrafts.length} de {drafts.length} archivos
+                  para &quot;{searchQuery}&quot;
+                </>
+              ) : (
+                <>
+                  {drafts.length} archivo{drafts.length !== 1 ? "s" : ""}{" "}
+                  sincronizado{drafts.length !== 1 ? "s" : ""} automáticamente
+                  desde Figma
+                  {userFiles.length > 0 && (
+                    <>
+                      {" "}
+                      + {userFiles.length} agregado
+                      {userFiles.length !== 1 ? "s" : ""} manualmente
+                    </>
+                  )}
+                  {lastSyncTime && isAutoSyncEnabled && (
+                    <span className="ml-2 text-green-600 dark:text-green-400">
+                      • Auto-sync activo
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Quick stats */}
+            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-1">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <span>1 equipo</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+                <span>2 proyectos</span>
+              </div>
+              {lastSyncTime && (
+                <div className="flex items-center gap-1">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span>{lastSyncTime.toLocaleTimeString()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

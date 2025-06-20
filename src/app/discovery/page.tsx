@@ -24,6 +24,7 @@ export default function FileDiscoveryTool() {
   const [teamId, setTeamId] = useState("");
   const [results, setResults] = useState<FileDiscoveryResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showHelp, setShowHelp] = useState(true);
   const { addUserFile } = useUserFiles();
 
   const discoverFileByUrl = async (url: string) => {
@@ -148,6 +149,7 @@ export default function FileDiscoveryTool() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      {" "}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
           Descubrir Archivos de Figma
@@ -156,7 +158,93 @@ export default function FileDiscoveryTool() {
           Encuentra y añade tus archivos de Figma a la aplicación
         </p>
       </div>
-
+      {/* Help Section for Personal Drafts */}
+      {showHelp && (
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/10 dark:to-orange-900/10 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 mb-6">
+          <div className="flex items-start gap-3">
+            <svg
+              className="w-6 h-6 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+              />
+            </svg>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200">
+                  💡 ¿Cómo encontrar tus drafts personales de Figma?
+                </h3>
+                <button
+                  onClick={() => setShowHelp(false)}
+                  className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div className="mt-3 text-sm text-yellow-700 dark:text-yellow-300 space-y-2">
+                <p className="font-medium">
+                  La API de Figma solo puede acceder a archivos en
+                  equipos/proyectos. Los drafts personales no son accesibles
+                  automáticamente.
+                </p>
+                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-yellow-200 dark:border-yellow-700">
+                    <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                      🔍 Paso 1: Encontrar tus drafts en Figma
+                    </h4>{" "}
+                    <ul className="text-xs space-y-1">
+                      <li>
+                        • Ve a <strong>figma.com</strong> en tu navegador
+                      </li>
+                      <li>
+                        • Busca en tu página principal o &quot;Recents&quot;
+                      </li>
+                      <li>
+                        • Mira en la sección &quot;Drafts&quot; de tu perfil
+                      </li>
+                      <li>• Revisa archivos no organizados en equipos</li>
+                    </ul>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-yellow-200 dark:border-yellow-700">
+                    <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                      📋 Paso 2: Copiar URLs de tus drafts
+                    </h4>
+                    <ul className="text-xs space-y-1">
+                      <li>• Abre cada draft que quieras añadir</li>
+                      <li>• Copia la URL completa del navegador</li>
+                      <li>• Pégala en el campo &quot;URL Manual&quot; abajo</li>
+                      <li>• Repite para cada draft personal</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mt-3">
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    <strong>💡 Tip:</strong> Una vez añadidos aquí, tus drafts
+                    personales aparecerán junto con los archivos sincronizados
+                    automáticamente en la página principal.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Method Selection */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
@@ -245,7 +333,6 @@ export default function FileDiscoveryTool() {
           </form>
         )}
       </div>
-
       {/* Results */}
       {results.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
@@ -346,34 +433,42 @@ export default function FileDiscoveryTool() {
           </div>
         </div>
       )}
-
       {/* Help Section */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mt-6">
-        <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">
-          Cómo Obtener URLs de Tus Archivos
-        </h3>
+      {showHelp && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mt-6">
+          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">
+            Cómo Obtener URLs de Tus Archivos
+          </h3>
 
-        <div className="space-y-3 text-sm text-blue-800 dark:text-blue-200">
-          <div>
-            <strong>Método 1 - Desde Figma Web:</strong>
-            <ol className="list-decimal list-inside mt-1 ml-4 space-y-1">
-              <li>Ve a https://www.figma.com</li>
-              <li>Abre cualquier archivo tuyo</li>
-              <li>Copia la URL del navegador</li>
-              <li>Pégala en el campo de arriba</li>
-            </ol>
+          <div className="space-y-3 text-sm text-blue-800 dark:text-blue-200">
+            <div>
+              <strong>Método 1 - Desde Figma Web:</strong>
+              <ol className="list-decimal list-inside mt-1 ml-4 space-y-1">
+                <li>Ve a https://www.figma.com</li>
+                <li>Abre cualquier archivo tuyo</li>
+                <li>Copia la URL del navegador</li>
+                <li>Pégala en el campo de arriba</li>
+              </ol>
+            </div>
+
+            <div>
+              <strong>Método 2 - Desde Figma Desktop:</strong>
+              <ol className="list-decimal list-inside mt-1 ml-4 space-y-1">
+                <li>Abre un archivo en Figma Desktop</li>
+                <li>Ve a Archivo → Copiar enlace</li>
+                <li>Pega el enlace aquí</li>
+              </ol>
+            </div>
           </div>
 
-          <div>
-            <strong>Método 2 - Desde Figma Desktop:</strong>
-            <ol className="list-decimal list-inside mt-1 ml-4 space-y-1">
-              <li>Abre un archivo en Figma Desktop</li>
-              <li>Ve a Archivo → Copiar enlace</li>
-              <li>Pega el enlace aquí</li>
-            </ol>
-          </div>
+          <button
+            onClick={() => setShowHelp(false)}
+            className="mt-4 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+          >
+            Ocultar Ayuda
+          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
