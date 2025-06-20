@@ -17,12 +17,18 @@ export async function GET(request: NextRequest) {
     // Get search query from URL params
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q");
+    const teamId = "958458320512591682"; // Team ID extraído de tu URL
 
     let drafts;
     if (query) {
-      drafts = await figmaClient.searchFiles(query);
+      // Get team files and filter by query
+      const allFiles = await figmaClient.getTeamFiles(teamId);
+      drafts = allFiles.filter((file) =>
+        file.name.toLowerCase().includes(query.toLowerCase())
+      );
     } else {
-      drafts = await figmaClient.getRecentFiles();
+      // Get all files from the team
+      drafts = await figmaClient.getTeamFiles(teamId);
     }
 
     return NextResponse.json({ drafts });

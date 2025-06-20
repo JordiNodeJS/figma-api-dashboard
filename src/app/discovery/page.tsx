@@ -95,6 +95,57 @@ export default function FileDiscoveryTool() {
     }
   };
 
+  const handleTeamDiscovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Use the team ID from your URL if not provided
+    const finalTeamId = teamId.trim() || "958458320512591682";
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/figma/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId: finalTeamId }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Convert team files to discovery results format
+        const teamResults: FileDiscoveryResult[] = data.files.map(
+          (file: { key: string; name: string; role: string }) => ({
+            url: `https://www.figma.com/design/${file.key}/${file.name.replace(
+              /\s+/g,
+              "-"
+            )}`,
+            fileKey: file.key,
+            accessible: true,
+            fileData: {
+              key: file.key,
+              name: file.name,
+              role: file.role,
+            },
+          })
+        );
+
+        setResults(teamResults);
+
+        // Show success message
+        alert(`¡Encontrados ${data.filesCount} archivos en el equipo!`);
+      } else {
+        // Handle specific errors
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error fetching team files:", error);
+      alert("Error al conectar con el equipo de Figma");
+    }
+
+    setLoading(false);
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
@@ -111,7 +162,6 @@ export default function FileDiscoveryTool() {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           Método de Descubrimiento
         </h2>
-
         <div className="flex gap-4 mb-6">
           <button
             onClick={() => setDiscoveryMethod("manual")}
@@ -134,7 +184,6 @@ export default function FileDiscoveryTool() {
             Por Equipo
           </button>
         </div>
-
         {discoveryMethod === "manual" && (
           <form onSubmit={handleManualDiscovery} className="space-y-4">
             <div>
@@ -159,10 +208,9 @@ export default function FileDiscoveryTool() {
               Verificar Archivo
             </button>
           </form>
-        )}
-
+        )}{" "}
         {discoveryMethod === "team" && (
-          <div className="space-y-4">
+          <form onSubmit={handleTeamDiscovery} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 ID del Equipo (opcional)
@@ -171,18 +219,30 @@ export default function FileDiscoveryTool() {
                 type="text"
                 value={teamId}
                 onChange={(e) => setTeamId(e.target.value)}
-                placeholder="ID del equipo de Figma"
+                placeholder="958458320512591682 (se usará por defecto si está vacío)"
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               />
-            </div>
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-              <p className="text-yellow-800 dark:text-yellow-200 text-sm">
-                <strong>Nota:</strong> El acceso por equipo requiere permisos
-                especiales. La mayoría de usuarios necesitarán usar el método de
-                URL manual.
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Si lo dejas vacío, se usará tu team ID por defecto:
+                958458320512591682
               </p>
             </div>
-          </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center gap-2"
+            >
+              {loading && <LoadingSpinner size="sm" />}
+              Listar Archivos del Equipo
+            </button>
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <p className="text-blue-800 dark:text-blue-200 text-sm">
+                <strong>¡Nuevo!</strong> Esta funcionalidad listará
+                automáticamente todos los archivos de tu equipo de Figma. Puede
+                tardar unos momentos si tienes muchos proyectos.
+              </p>
+            </div>
+          </form>
         )}
       </div>
 
@@ -197,6 +257,7 @@ export default function FileDiscoveryTool() {
             {results.map((result, index) => (
               <div
                 key={index}
+                data-testid="discovered-file"
                 className={`p-4 rounded-lg border ${
                   result.accessible
                     ? "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20"

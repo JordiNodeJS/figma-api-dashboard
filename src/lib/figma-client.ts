@@ -238,4 +238,66 @@ export class FigmaClient {
       return null;
     }
   }
+
+  /**
+   * Get team projects and their files automatically
+   */
+  async getTeamFiles(teamId: string): Promise<FigmaDraft[]> {
+    try {
+      console.log(`Fetching files for team: ${teamId}`);
+
+      // First, get all projects for the team
+      const projectsResponse = await this.getTeamProjects(teamId);
+      const projects = projectsResponse.projects;
+
+      console.log(`Found ${projects.length} projects in team`);
+
+      const allFiles: FigmaDraft[] = [];
+
+      // For each project, get all files
+      for (const project of projects) {
+        try {
+          const filesResponse = await this.getProjectFiles(project.id);
+
+          // Convert files to FigmaDraft format
+          const projectFiles: FigmaDraft[] = filesResponse.files.map(
+            (file) => ({
+              key: file.key,
+              name: file.name,
+              thumbnail_url: file.thumbnail_url,
+              last_modified: file.last_modified,
+              role: "viewer", // Default role, could be determined from file details
+              project_id: project.id,
+              project_name: project.name,
+            })
+          );
+
+          console.log(
+            `Found ${projectFiles.length} files in project: ${project.name}`
+          );
+          allFiles.push(...projectFiles);
+        } catch (projectError) {
+          console.error(
+            `Error fetching files for project ${project.name}:`,
+            projectError
+          );
+          // Continue with other projects even if one fails
+        }
+      }
+
+      console.log(`Total files found: ${allFiles.length}`);
+      return allFiles;
+    } catch (error) {
+      console.error("Error fetching team files:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Extract team ID from Figma team URL
+   */
+  static extractTeamId(url: string): string | null {
+    const teamIdMatch = url.match(/figma\.com\/files\/team\/([0-9]+)/);
+    return teamIdMatch ? teamIdMatch[1] : null;
+  }
 }
