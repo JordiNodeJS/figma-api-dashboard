@@ -23,12 +23,12 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState(true);
-  const [highlightedFile, setHighlightedFile] = useState<string | null>(null);
-  const {
+  const [highlightedFile, setHighlightedFile] = useState<string | null>(null);  const {
     userFiles,
     loading: userFilesLoading,
     syncing,
     syncLog,
+    updateFileThumbnail,
   } = useUserFiles();
   const { token, isLoading: tokenLoading, hasToken } = useFigmaToken();
   const autoSyncRef = useRef<NodeJS.Timeout | null>(null);
@@ -548,9 +548,11 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
                     highlightedFile === draft.key
                       ? "ring-4 ring-green-400 ring-opacity-75 animate-pulse"
                       : ""
-                  }`}
-                >
-                  <DraftCard draft={draft} />
+                  }`}                >
+                  <DraftCard 
+                    draft={draft} 
+                    onUpdateThumbnail={updateFileThumbnail}
+                  />
                 </div>
               ))}
             </div>

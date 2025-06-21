@@ -113,6 +113,44 @@ export function useUserFiles() {
     }
   }, [addLogEntry]);
 
+  // Update file thumbnail function
+  const updateFileThumbnail = useCallback(async (fileKey: string) => {
+    try {
+      addLogEntry(`🖼️ Actualizando vista previa para ${fileKey}...`);
+      
+      const response = await fetch("/api/figma/thumbnail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileKey }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Update the file in our list
+        setUserFiles(prev => prev.map(file => 
+          file.key === fileKey 
+            ? { 
+                ...file, 
+                thumbnail_url: data.thumbnail_url,
+                last_modified: data.last_modified || file.last_modified,
+                name: data.name || file.name
+              }
+            : file
+        ));
+
+        addLogEntry("✅ Vista previa actualizada exitosamente");
+        return true;
+      } else {
+        addLogEntry("❌ No se pudo obtener la vista previa");
+        return false;
+      }
+    } catch {
+      addLogEntry("❌ Error al actualizar vista previa");
+      return false;
+    }
+  }, [addLogEntry]);
+
   // Load initial data (localStorage + server merge)
   useEffect(() => {
     const loadInitialData = async () => {
@@ -144,7 +182,7 @@ export function useUserFiles() {
           saveToServer(localFile, "add");
         }
       }
-
+      
       setUserFiles(mergedFiles);
 
       // Update localStorage with merged data
@@ -157,9 +195,29 @@ export function useUserFiles() {
       }
 
       setLoading(false);
+
+      // Check for files without thumbnails and try to fetch them
+      const filesWithoutThumbnails = mergedFiles.filter(
+        file => !file.thumbnail_url && file.project_name !== "Archivos Manuales"
+      );
+
+      if (filesWithoutThumbnails.length > 0) {
+        addLogEntry(`🖼️ Obteniendo vistas previas para ${filesWithoutThumbnails.length} archivos...`);
+        
+        // Update thumbnails in background, one at a time to avoid rate limiting
+        for (const file of filesWithoutThumbnails) {
+          try {
+            await updateFileThumbnail(file.key);
+            // Small delay between requests
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } catch {
+            // Continue with next file if one fails
+          }
+        }
+      }
     };
     loadInitialData();
-  }, [loadFromServer, saveToServer, addLogEntry]);
+  }, [loadFromServer, saveToServer, addLogEntry, updateFileThumbnail]);
 
   const addUserFile = async (file: FigmaDraft) => {
     addLogEntry(`📄 Añadiendo "${file.name}"...`);
@@ -243,5 +301,6 @@ export function useUserFiles() {
     addUserFile,
     removeUserFile,
     clearAllFiles,
+    updateFileThumbnail,
   };
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import LoadingSpinner from "@/components/loading-spinner";
 import SyncLog from "@/components/sync-log";
 import { useUserFiles } from "@/hooks/use-user-files";
@@ -10,11 +11,12 @@ import { useUserFiles } from "@/hooks/use-user-files";
 interface FileDiscoveryResult {
   url: string;
   fileKey: string;
-  accessible: boolean;
-  fileData?: {
+  accessible: boolean;  fileData?: {
     key: string;
     name: string;
     role: string;
+    thumbnail_url?: string;
+    last_modified?: string;
   };
   error?: string;
 }
@@ -77,11 +79,12 @@ export default function FileDiscoveryTool() {
     setResults((prev) => [result, ...prev]);
     setFileUrl("");
     setLoading(false);
-  };
-  const addToMyFiles = async (fileData: {
+  };  const addToMyFiles = async (fileData: {
     key: string;
     name: string;
     role: string;
+    thumbnail_url?: string;
+    last_modified?: string;
   }) => {
     try {
       setAdding(fileData.key);
@@ -91,7 +94,8 @@ export default function FileDiscoveryTool() {
         key: fileData.key,
         name: fileData.name,
         role: fileData.role,
-        last_modified: new Date().toISOString(),
+        thumbnail_url: fileData.thumbnail_url,
+        last_modified: fileData.last_modified || new Date().toISOString(),
         project_name: "Mis Archivos",
       });
 
@@ -173,10 +177,15 @@ export default function FileDiscoveryTool() {
 
       const data = await response.json();
 
-      if (response.ok) {
-        // Convert team files to discovery results format
+      if (response.ok) {        // Convert team files to discovery results format
         const teamResults: FileDiscoveryResult[] = data.files.map(
-          (file: { key: string; name: string; role: string }) => ({
+          (file: { 
+            key: string; 
+            name: string; 
+            role: string;
+            thumbnail_url?: string;
+            last_modified?: string;
+          }) => ({
             url: `https://www.figma.com/design/${file.key}/${file.name.replace(
               /\s+/g,
               "-"
@@ -187,6 +196,8 @@ export default function FileDiscoveryTool() {
               key: file.key,
               name: file.name,
               role: file.role,
+              thumbnail_url: file.thumbnail_url,
+              last_modified: file.last_modified,
             },
           })
         );
@@ -506,10 +517,20 @@ export default function FileDiscoveryTool() {
                       >
                         {result.accessible ? "Accesible" : "No Accesible"}
                       </span>
-                    </div>
-
-                    {result.fileData && (
-                      <div className="mb-2">
+                    </div>                    {result.fileData && (
+                      <div className="mb-3">
+                        {/* Thumbnail preview */}
+                        {result.fileData.thumbnail_url && (
+                          <div className="mb-2 aspect-video bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden relative max-w-xs">
+                            <Image
+                              src={result.fileData.thumbnail_url}
+                              alt={`Preview of ${result.fileData.name}`}
+                              className="object-cover"
+                              fill
+                              sizes="(max-width: 768px) 100vw, 300px"
+                            />
+                          </div>
+                        )}
                         <h3 className="font-semibold text-gray-900 dark:text-white">
                           {result.fileData.name}
                         </h3>
