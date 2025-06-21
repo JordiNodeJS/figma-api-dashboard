@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import FigmaDrafts from "@/components/figma-drafts";
 import FigmaProjects from "@/components/figma-projects";
 import FigmaTokenStatus from "@/components/figma-token-status";
@@ -8,11 +9,123 @@ import FigmaTokenStatus from "@/components/figma-token-status";
 type TabType = "drafts" | "projects";
 
 export default function Home() {
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get("tab") as TabType | null;
+  const newFileKey = searchParams.get("new");
+  const newFileName = searchParams.get("name");
+  const isManualFile = searchParams.get("manual") === "true";
   const [activeTab, setActiveTab] = useState<TabType>("projects");
+  const [showNotification, setShowNotification] = useState(false);
+
+  // Set tab from URL parameter on mount
+  useEffect(() => {
+    if (tabFromUrl && (tabFromUrl === "drafts" || tabFromUrl === "projects")) {
+      setActiveTab(tabFromUrl);
+    }
+
+    // Show notification if a new file was added
+    if (newFileKey && newFileName) {
+      setShowNotification(true);
+      // Hide notification after 5 seconds
+      const timer = setTimeout(() => {
+        setShowNotification(false);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [tabFromUrl, newFileKey, newFileName]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Success Notification */}
+        {showNotification && newFileName && (
+          <div className="fixed top-4 right-4 z-50 max-w-sm w-full">
+            <div
+              className={`p-4 rounded-lg shadow-lg border-l-4 ${
+                isManualFile
+                  ? "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-400 dark:border-yellow-600"
+                  : "bg-green-50 dark:bg-green-900/20 border-green-400 dark:border-green-600"
+              }`}
+            >
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg
+                    className={`w-5 h-5 mt-0.5 ${
+                      isManualFile ? "text-yellow-400" : "text-green-400"
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d={
+                        isManualFile
+                          ? "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          : "M5 13l4 4L19 7"
+                      }
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3 w-0 flex-1">
+                  <p
+                    className={`text-sm font-medium ${
+                      isManualFile
+                        ? "text-yellow-800 dark:text-yellow-200"
+                        : "text-green-800 dark:text-green-200"
+                    }`}
+                  >
+                    {isManualFile
+                      ? "Archivo añadido manualmente"
+                      : "¡Archivo añadido exitosamente!"}
+                  </p>
+                  <p
+                    className={`mt-1 text-sm ${
+                      isManualFile
+                        ? "text-yellow-700 dark:text-yellow-300"
+                        : "text-green-700 dark:text-green-300"
+                    }`}
+                  >
+                    {decodeURIComponent(newFileName)}
+                  </p>
+                  {isManualFile && (
+                    <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
+                      Funcionalidad limitada para archivos de la comunidad
+                    </p>
+                  )}
+                </div>
+                <div className="ml-4 flex-shrink-0 flex">
+                  <button
+                    onClick={() => setShowNotification(false)}
+                    className={`inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                      isManualFile
+                        ? "text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 focus:ring-yellow-600"
+                        : "text-green-500 hover:bg-green-100 dark:hover:bg-green-900/30 focus:ring-green-600"
+                    }`}
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -133,7 +246,7 @@ export default function Home() {
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
                 Tus Drafts de Figma
               </h2>
-              <FigmaDrafts />
+              <FigmaDrafts newFileKey={newFileKey} />
             </div>
           )}
         </div>

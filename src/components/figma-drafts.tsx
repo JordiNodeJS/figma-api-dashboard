@@ -12,17 +12,23 @@ import FigmaTokenSetup from "@/components/figma-token-setup";
 const AUTO_SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const INITIAL_SYNC_DELAY = 2000; // 2 seconds
 
-export default function FigmaDrafts() {
+interface FigmaDraftsProps {
+  newFileKey?: string | null;
+}
+
+export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
   const [drafts, setDrafts] = useState<FigmaDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState(true);
+  const [highlightedFile, setHighlightedFile] = useState<string | null>(null);
   const { userFiles, loading: userFilesLoading } = useUserFiles();
   const { token, isLoading: tokenLoading, hasToken } = useFigmaToken();
   const autoSyncRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
+  const highlightedFileRef = useRef<HTMLDivElement>(null);
 
   const fetchDrafts = useCallback(
     async (query?: string, showLoading = true) => {
@@ -84,6 +90,35 @@ export default function FigmaDrafts() {
     },
     [userFiles, token]
   );
+  // Handle new file highlighting
+  useEffect(() => {
+    if (newFileKey) {
+      setHighlightedFile(newFileKey);
+      // Force a refresh to ensure the new file is visible
+      if (!userFilesLoading && !tokenLoading && hasToken) {
+        fetchDrafts(undefined, false); // Refresh without loading spinner
+      }
+      // Remove highlight after 10 seconds
+      const timer = setTimeout(() => {
+        setHighlightedFile(null);
+      }, 10000);
+
+      // Scroll to highlighted file after a short delay (to ensure it's rendered)
+      const scrollTimer = setTimeout(() => {
+        if (highlightedFileRef.current) {
+          highlightedFileRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }, 1000);
+
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(scrollTimer);
+      };
+    }
+  }, [newFileKey, userFilesLoading, tokenLoading, hasToken, fetchDrafts]);
 
   // Auto-sync functionality
   const startAutoSync = useCallback(() => {
@@ -470,7 +505,19 @@ export default function FigmaDrafts() {
           {filteredDrafts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredDrafts.map((draft) => (
-                <DraftCard key={draft.key} draft={draft} />
+                <div
+                  key={draft.key}
+                  ref={
+                    highlightedFile === draft.key ? highlightedFileRef : null
+                  }
+                  className={`transition-all duration-1000 ${
+                    highlightedFile === draft.key
+                      ? "ring-4 ring-green-400 ring-opacity-75 animate-pulse"
+                      : ""
+                  }`}
+                >
+                  <DraftCard draft={draft} />
+                </div>
               ))}
             </div>
           ) : (

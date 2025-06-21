@@ -27,10 +27,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 group">
       {/* Project Header */}
-      <div 
-        onClick={handleClick}
-        className="p-6 cursor-pointer"
-      >
+      <div onClick={handleClick} className="p-6 cursor-pointer">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
@@ -111,7 +108,9 @@ export default function ProjectCard({ project }: ProjectCardProps) {
                   className="relative group/file cursor-pointer bg-gray-50 dark:bg-gray-700 rounded-lg p-3 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                 >
                   {/* Thumbnail */}
-                  <div className="w-full h-20 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-md mb-2 flex items-center justify-center relative overflow-hidden">                    {file.thumbnail_url ? (
+                  <div className="w-full h-20 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-md mb-2 flex items-center justify-center relative overflow-hidden">
+                    {" "}
+                    {file.thumbnail_url ? (
                       <Image
                         src={file.thumbnail_url}
                         alt={file.name}
@@ -121,7 +120,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
                         onError={(e) => {
                           // Fallback si la imagen no carga
                           const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
+                          target.style.display = "none";
                         }}
                       />
                     ) : (
@@ -139,7 +138,6 @@ export default function ProjectCard({ project }: ProjectCardProps) {
                         />
                       </svg>
                     )}
-                    
                     {/* Hover overlay */}
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover/file:bg-opacity-20 transition-all duration-200 rounded-md flex items-center justify-center">
                       <svg
@@ -157,23 +155,28 @@ export default function ProjectCard({ project }: ProjectCardProps) {
                       </svg>
                     </div>
                   </div>
-                  
+
                   {/* File info */}
                   <div className="text-xs">
                     <p className="font-medium text-gray-900 dark:text-white truncate">
                       {file.name}
                     </p>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">
-                      {file.last_modified ? new Date(file.last_modified).toLocaleDateString('es-ES', {
-                        month: 'short',
-                        day: 'numeric'
-                      }) : 'Sin fecha'}
+                      {file.last_modified
+                        ? new Date(file.last_modified).toLocaleDateString(
+                            "es-ES",
+                            {
+                              month: "short",
+                              day: "numeric",
+                            }
+                          )
+                        : "Sin fecha"}
                     </p>
                   </div>
                 </div>
               ))}
             </div>
-            
+
             {/* More files indicator */}
             {hasMoreFiles && (
               <div className="mt-2 text-center">

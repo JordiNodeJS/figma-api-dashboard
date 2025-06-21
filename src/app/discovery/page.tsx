@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/loading-spinner";
 import { useUserFiles } from "@/hooks/use-user-files";
 
@@ -17,6 +18,7 @@ interface FileDiscoveryResult {
 }
 
 export default function FileDiscoveryTool() {
+  const router = useRouter();
   const [discoveryMethod, setDiscoveryMethod] = useState<"manual" | "team">(
     "manual"
   );
@@ -24,6 +26,7 @@ export default function FileDiscoveryTool() {
   const [teamId, setTeamId] = useState("");
   const [results, setResults] = useState<FileDiscoveryResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null); // Track which file is being added
   const [showHelp, setShowHelp] = useState(true);
   const { addUserFile } = useUserFiles();
 
@@ -79,6 +82,8 @@ export default function FileDiscoveryTool() {
     role: string;
   }) => {
     try {
+      setAdding(fileData.key);
+
       // Add to local storage directly
       addUserFile({
         key: fileData.key,
@@ -88,11 +93,60 @@ export default function FileDiscoveryTool() {
         project_name: "Mis Archivos",
       });
 
-      alert(
-        "¡Archivo añadido a tu lista! Ve a la página principal para verlo."
+      // Small delay to show the loading state and success
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // Redirect to main page with drafts tab and highlight the new file
+      router.push(
+        `/?tab=drafts&new=${fileData.key}&name=${encodeURIComponent(
+          fileData.name
+        )}`
       );
     } catch {
       alert("Error al añadir archivo");
+      setAdding(null);
+    }
+  };
+  const addFileManually = async (url: string, fileName?: string) => {
+    try {
+      // Extract file key from URL
+      const fileKeyMatch = url.match(
+        /figma\.com\/(?:file|design)\/([A-Za-z0-9]+)/
+      );
+
+      if (!fileKeyMatch) {
+        alert("URL de Figma inválida");
+        return;
+      }
+
+      const fileKey = fileKeyMatch[1];
+      setAdding(fileKey);
+
+      const defaultName = fileName || `Archivo de Figma (${fileKey})`;
+
+      // Add directly to user files even if not fully accessible
+      addUserFile({
+        key: fileKey,
+        name: defaultName,
+        role: "viewer", // Default role for community files
+        last_modified: new Date().toISOString(),
+        project_name: "Archivos Manuales",
+        thumbnail_url: undefined, // Will be empty for community files
+      });
+
+      // Small delay to show the loading state and success
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // Redirect to main page with drafts tab and highlight the new file
+      router.push(
+        `/?tab=drafts&new=${fileKey}&name=${encodeURIComponent(
+          defaultName
+        )}&manual=true`
+      );
+    } catch (error) {
+      console.error("Error adding file manually:", error);
+      alert("Error al añadir archivo manualmente");
+      setAdding(null);
     }
   };
 
@@ -274,6 +328,7 @@ export default function FileDiscoveryTool() {
         </div>
         {discoveryMethod === "manual" && (
           <form onSubmit={handleManualDiscovery} className="space-y-4">
+            {" "}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 URL del Archivo de Figma
@@ -286,6 +341,34 @@ export default function FileDiscoveryTool() {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 required
               />
+              <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                <div className="flex items-start gap-2">
+                  <svg
+                    className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div className="text-sm">
+                    <p className="text-amber-800 dark:text-amber-200 font-medium">
+                      Archivos de la Comunidad
+                    </p>
+                    <p className="text-amber-700 dark:text-amber-300">
+                      Los archivos públicos de la comunidad de Figma pueden no
+                      ser completamente accesibles a través de la API. Si el
+                      archivo no se puede verificar automáticamente, podrás
+                      añadirlo manualmente con funcionalidad limitada.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
             <button
               type="submit"
@@ -415,17 +498,55 @@ export default function FileDiscoveryTool() {
                         Error: {result.error}
                       </p>
                     )}
-                  </div>
-
+                  </div>{" "}
                   {result.accessible && result.fileData && (
                     <button
                       onClick={() =>
                         result.fileData && addToMyFiles(result.fileData)
                       }
-                      className="ml-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-1 px-3 rounded-md transition-colors duration-200"
+                      disabled={adding === result.fileData.key}
+                      className={`ml-4 text-white text-sm font-medium py-1 px-3 rounded-md transition-colors duration-200 flex items-center gap-2 ${
+                        adding === result.fileData.key
+                          ? "bg-blue-400 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      }`}
                     >
-                      Añadir
+                      {adding === result.fileData.key ? (
+                        <>
+                          <LoadingSpinner size="sm" />
+                          Añadiendo...
+                        </>
+                      ) : (
+                        "Añadir"
+                      )}
                     </button>
+                  )}
+                  {!result.accessible && (
+                    <div className="ml-4 flex flex-col gap-2">
+                      <button
+                        onClick={() => addFileManually(result.url)}
+                        disabled={adding === result.fileKey}
+                        className={`text-white text-sm font-medium py-1 px-3 rounded-md transition-colors duration-200 flex items-center gap-2 ${
+                          adding === result.fileKey
+                            ? "bg-yellow-400 cursor-not-allowed"
+                            : "bg-yellow-600 hover:bg-yellow-700"
+                        }`}
+                        title="Añadir archivo manualmente (funcionalidad limitada)"
+                      >
+                        {adding === result.fileKey ? (
+                          <>
+                            <LoadingSpinner size="sm" />
+                            Añadiendo...
+                          </>
+                        ) : (
+                          "Añadir Manual"
+                        )}
+                      </button>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Los archivos de la comunidad pueden tener acceso
+                        limitado
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
