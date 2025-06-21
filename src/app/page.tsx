@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import FigmaDrafts from "@/components/figma-drafts";
 import FigmaProjects from "@/components/figma-projects";
 import FigmaTokenStatus from "@/components/figma-token-status";
+import SyncLog from "@/components/sync-log";
 
 type TabType = "drafts" | "projects";
 
@@ -251,6 +252,9 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {/* Sync Log - Fixed position */}
+      <SyncLog />
     </div>
   );
 }

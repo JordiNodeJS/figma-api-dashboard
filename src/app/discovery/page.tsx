@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import LoadingSpinner from "@/components/loading-spinner";
+import SyncLog from "@/components/sync-log";
 import { useUserFiles } from "@/hooks/use-user-files";
 
 interface FileDiscoveryResult {
@@ -75,7 +77,8 @@ export default function FileDiscoveryTool() {
     setResults((prev) => [result, ...prev]);
     setFileUrl("");
     setLoading(false);
-  };  const addToMyFiles = async (fileData: {
+  };
+  const addToMyFiles = async (fileData: {
     key: string;
     name: string;
     role: string;
@@ -122,7 +125,8 @@ export default function FileDiscoveryTool() {
       }
 
       const fileKey = fileKeyMatch[1];
-      setAdding(fileKey);      const defaultName = fileName || `Archivo de Figma (${fileKey})`;
+      setAdding(fileKey);
+      const defaultName = fileName || `Archivo de Figma (${fileKey})`;
 
       // Add directly to both localStorage and server
       await addUserFile({
@@ -205,14 +209,39 @@ export default function FileDiscoveryTool() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      {" "}
+      {/* Header with Back Button */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-          Descubrir Archivos de Figma
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Encuentra y añade tus archivos de Figma a la aplicación
-        </p>
+        <div className="flex items-center gap-4 mb-4">
+          {" "}
+          <Link
+            href="/"
+            className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>{" "}
+            <span className="font-medium">Volver a Inicio</span>
+          </Link>
+          <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Descubrir Archivos de Figma
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Encuentra y añade tus archivos de Figma a la aplicación
+            </p>
+          </div>
+        </div>
       </div>
       {/* Help Section for Personal Drafts */}
       {showHelp && (
@@ -562,7 +591,6 @@ export default function FileDiscoveryTool() {
           <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">
             Cómo Obtener URLs de Tus Archivos
           </h3>
-
           <div className="space-y-3 text-sm text-blue-800 dark:text-blue-200">
             <div>
               <strong>Método 1 - Desde Figma Web:</strong>
@@ -583,15 +611,17 @@ export default function FileDiscoveryTool() {
               </ol>
             </div>
           </div>
-
           <button
             onClick={() => setShowHelp(false)}
             className="mt-4 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
           >
             Ocultar Ayuda
-          </button>
+          </button>{" "}
         </div>
       )}
+
+      {/* Sync Log - Fixed position */}
+      <SyncLog />
     </div>
   );
 }

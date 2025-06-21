@@ -7,91 +7,116 @@ export function useUserFiles() {
   const [userFiles, setUserFiles] = useState<FigmaDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncLog, setSyncLog] = useState<string[]>([]);
 
+  // Helper function to add log entry
+  const addLogEntry = useCallback((message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = `[${timestamp}] ${message}`;
+    setSyncLog((prev) => [...prev.slice(-4), logEntry]); // Keep only last 5 entries
+    console.log(logEntry);
+  }, []);
   // Load from server
   const loadFromServer = useCallback(async () => {
     try {
-      console.log("🌐 Loading user files from server...");
+      addLogEntry("🌐 Conectando al servidor...");
       const response = await fetch("/api/figma/user-drafts");
-      
+
       if (response.ok) {
         const data = await response.json();
-        console.log("✅ Loaded from server:", data.drafts.length);
+        addLogEntry(`✅ Cargados ${data.drafts.length} archivos del servidor`);
         return data.drafts || [];
       } else {
-        console.warn("⚠️ Server response not OK, falling back to localStorage");
+        addLogEntry("⚠️ Error del servidor, usando datos locales");
         return [];
       }
     } catch (error) {
-      console.error("❌ Error loading from server, falling back to localStorage:", error);
+      addLogEntry("❌ Sin conexión al servidor, usando datos locales");
       return [];
     }
-  }, []);
-
+  }, [addLogEntry]);
   // Save to server
-  const saveToServer = useCallback(async (draft: FigmaDraft, action: 'add' | 'remove' = 'add') => {
-    try {
-      setSyncing(true);
-      console.log(`🌐 ${action === 'add' ? 'Saving' : 'Removing'} file to/from server:`, draft.key);
-      
-      const response = await fetch("/api/figma/user-drafts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          action, 
-          draft: action === 'add' ? draft : undefined,
-          fileKey: action === 'remove' ? draft.key : undefined
-        }),
-      });
+  const saveToServer = useCallback(
+    async (draft: FigmaDraft, action: "add" | "remove" = "add") => {
+      try {
+        setSyncing(true);
+        addLogEntry(
+          `🔄 ${action === "add" ? "Guardando" : "Eliminando"} "${
+            draft.name
+          }" en servidor...`
+        );
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`✅ Server ${action} successful:`, data.message);
-        return true;
-      } else {
-        console.error(`❌ Server ${action} failed`);
+        const response = await fetch("/api/figma/user-drafts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action,
+            draft: action === "add" ? draft : undefined,
+            fileKey: action === "remove" ? draft.key : undefined,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          addLogEntry(
+            `✅ ${
+              action === "add" ? "Guardado" : "Eliminado"
+            } en servidor exitosamente`
+          );
+          return true;
+        } else {
+          addLogEntry(
+            `❌ Error en servidor al ${
+              action === "add" ? "guardar" : "eliminar"
+            }`
+          );
+          return false;
+        }
+      } catch (error) {
+        addLogEntry(
+          `❌ Sin conexión: ${
+            action === "add" ? "guardado" : "eliminado"
+          } solo localmente`
+        );
         return false;
+      } finally {
+        setSyncing(false);
       }
-    } catch (error) {
-      console.error(`❌ Error ${action === 'add' ? 'saving to' : 'removing from'} server:`, error);
-      return false;
-    } finally {
-      setSyncing(false);
-    }
-  }, []);
-
+    },
+    [addLogEntry]
+  );
   // Clear server data
   const clearServer = useCallback(async () => {
     try {
       setSyncing(true);
-      console.log("🌐 Clearing server data...");
-      
+      addLogEntry("🗑️ Limpiando datos del servidor...");
+
       const response = await fetch("/api/figma/user-drafts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: 'clear' }),
+        body: JSON.stringify({ action: "clear" }),
       });
 
       if (response.ok) {
-        console.log("✅ Server data cleared");
+        addLogEntry("✅ Datos del servidor eliminados");
         return true;
       } else {
-        console.error("❌ Failed to clear server data");
+        addLogEntry("❌ Error al limpiar datos del servidor");
         return false;
       }
     } catch (error) {
-      console.error("❌ Error clearing server data:", error);
+      addLogEntry("❌ Sin conexión: no se pudieron limpiar datos del servidor");
       return false;
     } finally {
       setSyncing(false);
     }
-  }, []);
+  }, [addLogEntry]);
 
   // Load initial data (localStorage + server merge)
   useEffect(() => {
     const loadInitialData = async () => {
       console.log("� Loading initial user files...");
-      
+
       // Load from localStorage first (faster)
       let localFiles: FigmaDraft[] = [];
       try {
@@ -106,41 +131,44 @@ export function useUserFiles() {
 
       // Load from server
       const serverFiles = await loadFromServer();
-      
+
       // Merge localStorage and server data (server takes precedence)
       const mergedFiles = [...serverFiles];
-        // Add any localStorage files that aren't on the server
+      // Add any localStorage files that aren't on the server
       for (const localFile of localFiles) {
-        if (!serverFiles.some((serverFile: FigmaDraft) => serverFile.key === localFile.key)) {
+        if (
+          !serverFiles.some(
+            (serverFile: FigmaDraft) => serverFile.key === localFile.key
+          )
+        ) {
           mergedFiles.push(localFile);
           // Sync this file to server in the background
-          saveToServer(localFile, 'add');
+          saveToServer(localFile, "add");
         }
       }
-
       console.log("🔗 Merged files:", mergedFiles.length);
       setUserFiles(mergedFiles);
-      
+
       // Update localStorage with merged data
       if (mergedFiles.length > 0) {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedFiles));
         } catch (error) {
-          console.error("❌ Error updating localStorage:", error);
+          addLogEntry("❌ Error al actualizar archivos locales");
         }
       }
-      
-      setLoading(false);
-    };    loadInitialData();
-  }, [loadFromServer, saveToServer]);
 
+      setLoading(false);
+    };
+    loadInitialData();
+  }, [loadFromServer, saveToServer, addLogEntry]);
   const addUserFile = async (file: FigmaDraft) => {
-    console.log("🔄 Adding user file:", file);
-    
+    addLogEntry(`� Añadiendo "${file.name}"...`);
+
     // Check if file already exists
     const exists = userFiles.some((f) => f.key === file.key);
     if (exists) {
-      console.log("⚠️ File already exists:", file.key);
+      addLogEntry(`⚠️ "${file.name}" ya existe`);
       return;
     }
 
@@ -156,23 +184,22 @@ export function useUserFiles() {
     // Save to localStorage
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedFiles));
-      console.log("✅ File saved to localStorage. Total files:", updatedFiles.length);
+      addLogEntry(`💾 "${file.name}" guardado localmente`);
     } catch (error) {
-      console.error("❌ Error saving to localStorage:", error);
+      addLogEntry(`❌ Error al guardar "${file.name}" localmente`);
     }
 
     // Save to server in background
-    await saveToServer(newFile, 'add');
+    await saveToServer(newFile, "add");
   };
-
   const removeUserFile = async (fileKey: string) => {
-    console.log("🔄 Removing user file:", fileKey);
-    
-    const fileToRemove = userFiles.find(f => f.key === fileKey);
+    const fileToRemove = userFiles.find((f) => f.key === fileKey);
     if (!fileToRemove) {
-      console.log("⚠️ File not found:", fileKey);
+      addLogEntry(`⚠️ Archivo no encontrado: ${fileKey}`);
       return;
     }
+
+    addLogEntry(`🗑️ Eliminando "${fileToRemove.name}"...`);
 
     // Update local state
     const updatedFiles = userFiles.filter((f) => f.key !== fileKey);
@@ -181,27 +208,26 @@ export function useUserFiles() {
     // Update localStorage
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedFiles));
-      console.log("✅ File removed from localStorage");
+      addLogEntry(`💾 "${fileToRemove.name}" eliminado localmente`);
     } catch (error) {
-      console.error("❌ Error updating localStorage:", error);
+      addLogEntry(`❌ Error al eliminar "${fileToRemove.name}" localmente`);
     }
 
     // Remove from server in background
-    await saveToServer(fileToRemove, 'remove');
+    await saveToServer(fileToRemove, "remove");
   };
-
   const clearAllFiles = async () => {
-    console.log("🔄 Clearing all user files");
-    
+    addLogEntry("�️ Limpiando todos los archivos...");
+
     // Update local state
     setUserFiles([]);
-    
+
     // Clear localStorage
     try {
       localStorage.removeItem(STORAGE_KEY);
-      console.log("✅ LocalStorage cleared");
+      addLogEntry("💾 Archivos locales eliminados");
     } catch (error) {
-      console.error("❌ Error clearing localStorage:", error);
+      addLogEntry("❌ Error al limpiar archivos locales");
     }
 
     // Clear server data
@@ -212,6 +238,7 @@ export function useUserFiles() {
     userFiles,
     loading,
     syncing,
+    syncLog,
     addUserFile,
     removeUserFile,
     clearAllFiles,

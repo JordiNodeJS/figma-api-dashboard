@@ -25,7 +25,12 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState(true);
   const [highlightedFile, setHighlightedFile] = useState<string | null>(null);
-  const { userFiles, loading: userFilesLoading } = useUserFiles();
+  const {
+    userFiles,
+    loading: userFilesLoading,
+    syncing,
+    syncLog,
+  } = useUserFiles();
   const { token, isLoading: tokenLoading, hasToken } = useFigmaToken();
   const autoSyncRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
@@ -715,6 +720,34 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sync Status Log */}
+      {(syncing || syncLog.length > 0) && (
+        <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                syncing ? "bg-blue-500 animate-pulse" : "bg-green-500"
+              }`}
+            ></div>
+            <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+              Estado de Sincronización
+            </h3>
+          </div>
+          <div className="space-y-1 text-xs font-mono">
+            {syncLog.slice(-5).map((entry: string, index: number) => (
+              <div key={index} className="text-blue-700 dark:text-blue-300">
+                {entry}
+              </div>
+            ))}
+            {syncing && (
+              <div className="text-blue-600 dark:text-blue-400 animate-pulse">
+                🔄 Sincronizando en progreso...
+              </div>
+            )}
           </div>
         </div>
       )}
