@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { FigmaDraft } from "@/types/figma";
 import DraftCard from "@/components/draft-card";
 import LoadingSpinner from "@/components/loading-spinner";
-import DebugUserFiles from "@/components/debug-user-files";
 import { useUserFiles } from "@/hooks/use-user-files";
 import { useFigmaToken } from "@/hooks/use-figma-token";
 import FigmaTokenSetup from "@/components/figma-token-setup";
@@ -19,7 +18,7 @@ interface FigmaDraftsProps {
 
 export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
   const [drafts, setDrafts] = useState<FigmaDraft[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false since we show user files first
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
@@ -62,14 +61,11 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
 
         if (!response.ok) {
           throw new Error(data.error || "Error al cargar los drafts");
-        }
+        } // Only update state if component is still mounted
+        if (!mountedRef.current) return;
 
-        // Only update state if component is still mounted
-        if (!mountedRef.current) return; // Combine API drafts with user files
+        // Combine API drafts with user files
         const apiDrafts = data.drafts || [];
-        console.log("📊 User files:", userFiles.length);
-        console.log("📊 API drafts:", apiDrafts.length);
-
         const combinedDrafts = [
           ...userFiles.map((file) => ({
             ...file,
@@ -81,11 +77,8 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
           ),
         ];
 
-        console.log("📊 Combined drafts:", combinedDrafts.length);
         setDrafts(combinedDrafts);
         setLastSyncTime(new Date());
-
-        console.log(`Sync completed: ${combinedDrafts.length} files found`);
       } catch (err) {
         if (mountedRef.current) {
           setError(err instanceof Error ? err.message : "Error desconocido");
@@ -108,7 +101,6 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
           fetchDrafts(undefined, false); // Refresh with API if token available
         } else {
           // If no token, just update with user files directly
-          console.log("🔄 Updating drafts with user files only (no token)");
           const combinedDrafts = userFiles.map((file) => ({
             ...file,
             project_name: file.project_name || "Mis Archivos",
@@ -144,44 +136,29 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
     fetchDrafts,
     userFiles,
   ]);
-
   // Update drafts when userFiles change
   useEffect(() => {
     if (!userFilesLoading) {
-      console.log("🔄 User files changed, updating drafts...");
       if (hasToken && !tokenLoading) {
         // If we have a token, use the full fetch (combines userFiles + API)
         fetchDrafts(undefined, false);
       } else {
         // If no token, just show user files
-        console.log("📝 No token available, showing user files only");
         const combinedDrafts = userFiles.map((file) => ({
           ...file,
           project_name: file.project_name || "Mis Archivos",
         }));
         setDrafts(combinedDrafts);
-        console.log(
-          "✅ Drafts updated with user files:",
-          combinedDrafts.length
-        );
       }
     }
   }, [userFiles, userFilesLoading, hasToken, tokenLoading, fetchDrafts]);
-
-  // Auto-sync functionality
   const startAutoSync = useCallback(() => {
     if (autoSyncRef.current) {
       clearInterval(autoSyncRef.current);
     }
 
     if (isAutoSyncEnabled && hasToken && !tokenLoading) {
-      console.log(
-        "Starting auto-sync every",
-        AUTO_SYNC_INTERVAL / 60000,
-        "minutes"
-      );
       autoSyncRef.current = setInterval(() => {
-        console.log("Auto-syncing drafts...");
         fetchDrafts(undefined, false); // Don't show loading for auto-sync
       }, AUTO_SYNC_INTERVAL);
     }
@@ -191,36 +168,24 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
     if (autoSyncRef.current) {
       clearInterval(autoSyncRef.current);
       autoSyncRef.current = null;
-      console.log("Auto-sync stopped");
     }
-  }, []);
-  // Initial load effect
+  }, []); // Initial load and user files sync effect
   useEffect(() => {
-    console.log("🔄 Initial load effect triggered", {
-      userFilesLoading,
-      tokenLoading,
-      hasToken,
-      userFilesCount: userFiles.length,
-    });
-
-    if (!userFilesLoading && !tokenLoading && hasToken) {
-      // Initial delay before first sync
-      console.log("✅ Starting initial sync with API...");
-      const timeout = setTimeout(() => {
-        fetchDrafts();
-      }, INITIAL_SYNC_DELAY);
-
-      return () => clearTimeout(timeout);
-    } else if (!userFilesLoading && (!hasToken || tokenLoading)) {
-      // If no token but we have user files, show them immediately
-      console.log("📝 No token available, showing user files immediately");
-      const combinedDrafts = userFiles.map((file) => ({
+    if (!userFilesLoading) {
+      // Show user files immediately
+      const userFileDrafts = userFiles.map((file) => ({
         ...file,
         project_name: file.project_name || "Mis Archivos",
       }));
-      setDrafts(combinedDrafts);
-      setLoading(false);
-      console.log("✅ Initialized with user files:", combinedDrafts.length);
+      setDrafts(userFileDrafts);
+
+      // If we have a token, fetch additional drafts from API
+      if (!tokenLoading && hasToken) {
+        const timeout = setTimeout(() => {
+          fetchDrafts(undefined, false); // Background loading
+        }, INITIAL_SYNC_DELAY);
+        return () => clearTimeout(timeout);
+      }
     }
   }, [userFilesLoading, tokenLoading, hasToken, fetchDrafts, userFiles]);
 
@@ -321,9 +286,6 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
   }
   return (
     <div className="space-y-6">
-      {/* Debug Component - Remove this in production */}
-      <DebugUserFiles />
-
       {/* Search and Actions */}
       <div className="flex flex-col sm:flex-row gap-4">
         <form onSubmit={handleSearch} className="flex gap-4 flex-1">
@@ -438,14 +400,18 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
             Añadir Más Archivos
           </a>
         </div>
-      </div>
+      </div>{" "}
       {/* Sync Status */}
       {lastSyncTime && (
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-2">
           <div className="flex items-center gap-2">
             <svg
               className={`w-4 h-4 ${
-                isAutoSyncEnabled ? "text-green-500" : "text-gray-400"
+                loading
+                  ? "animate-spin text-blue-500"
+                  : isAutoSyncEnabled
+                  ? "text-green-500"
+                  : "text-gray-400"
               }`}
               fill="none"
               stroke="currentColor"
@@ -459,7 +425,9 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
               />
             </svg>
             <span>
-              Última sincronización: {lastSyncTime.toLocaleTimeString()}
+              {loading && drafts.length > 0
+                ? "Sincronizando..."
+                : `Última sincronización: ${lastSyncTime.toLocaleTimeString()}`}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -534,9 +502,9 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
             )}
           </div>
         </div>
-      </div>
-      {/* Loading State */}
-      {loading && (
+      </div>{" "}
+      {/* Loading State - Only show when no drafts are available */}
+      {loading && drafts.length === 0 && (
         <div className="flex justify-center py-12">
           <LoadingSpinner size="lg" />
         </div>
@@ -564,9 +532,9 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
           </div>
           <p className="text-red-700 dark:text-red-300 mt-1">{error}</p>
         </div>
-      )}
-      {/* Drafts Grid */}
-      {!loading && !error && (
+      )}{" "}
+      {/* Drafts Grid - Show drafts when available, even if loading */}
+      {!error && (drafts.length > 0 || !loading) && (
         <>
           {filteredDrafts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -635,9 +603,9 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
             </div>
           )}
         </>
-      )}
+      )}{" "}
       {/* Detailed sync stats */}
-      {!loading && !error && drafts.length > 0 && (
+      {!error && drafts.length > 0 && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -723,7 +691,6 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
           </div>
         </div>
       )}
-
       {/* Sync Status Log */}
       {(syncing || syncLog.length > 0) && (
         <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
