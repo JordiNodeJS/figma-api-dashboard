@@ -130,7 +130,7 @@ export default function Home() {
         {/* Header */}
         <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Figma Cursor
+            Figma API Dashboard
           </h1>
           <div className="flex gap-3 items-center">
             <FigmaTokenStatus />

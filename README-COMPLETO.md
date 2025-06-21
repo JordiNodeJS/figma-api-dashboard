@@ -1,8 +1,8 @@
-# 🎉 Figma Cursor - Guía Completa de Funcionalidades
+# 🎉 Figma API Dashboard - Guía Completa de Funcionalidades
 
 ## ✅ Estado Actual: Totalmente Funcional
 
-Tu aplicación **Figma Cursor** ahora puede mostrar **TODOS tus proyectos de Figma** reales. Aquí está todo lo que hemos implementado:
+Tu aplicación **Figma API Dashboard** ahora puede mostrar **TODOS tus proyectos de Figma** reales. Aquí está todo lo que hemos implementado:
 
 ---
 
@@ -154,7 +154,7 @@ http://localhost:3000/diagnostics  # Diagnósticos
 
 ## 🎊 ¡Listo para Usar!
 
-Tu aplicación **Figma Cursor** está completamente configurada y puede:
+Tu aplicación **Figma API Dashboard** está completamente configurada y puede:
 
 ✅ **Conectarse a la API real de Figma**  
 ✅ **Mostrar archivos de ejemplo**  

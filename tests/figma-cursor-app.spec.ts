@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Figma Cursor App", () => {
-  test("Test completo de funcionalidades de la aplicación Figma Cursor", async ({
+test.describe("Figma API Dashboard App", () => {
+  test("Test completo de funcionalidades de la aplicación Figma API Dashboard", async ({
     page,
   }) => {
     // 1. Navegar a la página principal
@@ -10,7 +10,7 @@ test.describe("Figma Cursor App", () => {
 
     // Verificar elementos principales
     await expect(
-      page.getByRole("heading", { name: "Figma Cursor" })
+      page.getByRole("heading", { name: "Figma API Dashboard" })
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Tus Drafts de Figma" })
@@ -105,7 +105,7 @@ test.describe("Figma Cursor App", () => {
 
     // Verificar que los elementos siguen siendo visibles en móvil
     await expect(
-      page.getByRole("heading", { name: "Figma Cursor" })
+      page.getByRole("heading", { name: "Figma API Dashboard" })
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Añadir Archivos" })

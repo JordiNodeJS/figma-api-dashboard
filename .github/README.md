@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains GitHub Copilot custom instructions and specific prompt files for the Figma Cursor Next.js project.
+This directory contains GitHub Copilot custom instructions and specific prompt files for the Figma API Dashboard Next.js project.
 
 ## Files Structure
 

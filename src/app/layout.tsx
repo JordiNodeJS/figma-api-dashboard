@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Figma Cursor - Gestiona tus proyectos de Figma",
+  title: "Figma API Dashboard - Gestiona tus proyectos y archivos de Figma",
   description:
-    "Una aplicación para gestionar y visualizar tus proyectos y drafts de Figma",
+    "Dashboard moderno para gestionar, visualizar y sincronizar proyectos y archivos de Figma usando la API oficial",
 };
 
 export default function RootLayout({

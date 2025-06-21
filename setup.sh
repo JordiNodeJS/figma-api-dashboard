@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Configurando Figma Cursor con Bun..."
+echo "🚀 Configurando Figma API Dashboard con Bun..."
 
 # Verificar si Bun está instalado
 if ! command -v bun &> /dev/null; then

@@ -1,4 +1,4 @@
-# Figma Cursor - GitHub Copilot Custom Instructions
+# Figma API Dashboard - GitHub Copilot Custom Instructions
 
 ## Project Overview
 

@@ -1,5 +1,5 @@
 @echo off
-echo 🚀 Configurando Figma Cursor con Bun...
+echo 🚀 Configurando Figma API Dashboard con Bun...
 
 REM Verificar si Bun está instalado
 where bun >nul 2>nul
