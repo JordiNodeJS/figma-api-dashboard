@@ -198,160 +198,17 @@ export class FigmaClient {
       `/images/${fileKey}?${params.toString()}`
     );
   }
+
   /**
    * Get recent files (drafts) for the authenticated user
-   * Note: Figma API doesn't provide a direct endpoint for user's recent files
-   * This method returns an empty array - files should come from team projects
+   * Note: Figma API doesn't provide direct access to personal drafts
+   * This method returns empty array - use team-based file discovery instead
    */
   async getRecentFiles(): Promise<FigmaDraft[]> {
-    try {
-      console.log("=== ATTEMPTING TO GET RECENT FILES ===");
-
-      // Get user information first
-      const user = await this.getUser();
-      console.log("Fetching recent files for user:", user.handle, user.id);
-
-      const recentFiles: FigmaDraft[] = [];
-
-      // Try multiple potential endpoints for recent files
-      const potentialEndpoints = [
-        `/users/${user.id}/recent_files`,
-        `/users/me/recent_files`,
-        `/me/recent_files`,
-        `/recent_files`,
-        `/files/recent`,
-        `/users/${user.id}/files`,
-        `/users/me/files`,
-        `/me/files`,
-      ];
-
-      for (const endpoint of potentialEndpoints) {
-        try {
-          console.log(`Trying endpoint: ${endpoint}`);
-          const response = await this.makeRequest<Record<string, unknown>>(
-            endpoint
-          );
-          console.log(`✅ SUCCESS: ${endpoint}`, response);
-
-          // If we get any files, try to parse them
-          if (
-            response &&
-            (response.files || response.recent_files || response.data)
-          ) {
-            const files =
-              response.files || response.recent_files || response.data;
-            if (Array.isArray(files)) {
-              files.forEach((file: Record<string, unknown>) => {
-                if (
-                  typeof file.key === "string" &&
-                  typeof file.name === "string"
-                ) {
-                  recentFiles.push({
-                    key: file.key,
-                    name: file.name,
-                    thumbnail_url:
-                      typeof file.thumbnail_url === "string"
-                        ? file.thumbnail_url
-                        : typeof file.thumbnailUrl === "string"
-                        ? file.thumbnailUrl
-                        : undefined,
-                    last_modified:
-                      typeof file.last_modified === "string"
-                        ? file.last_modified
-                        : typeof file.lastModified === "string"
-                        ? file.lastModified
-                        : typeof file.updated_at === "string"
-                        ? file.updated_at
-                        : "",
-                    role: typeof file.role === "string" ? file.role : "viewer",
-                    project_name:
-                      typeof file.project_name === "string"
-                        ? file.project_name
-                        : "Recent Files",
-                  });
-                }
-              });
-            }
-          }
-
-          // If we found files in this endpoint, use them
-          if (recentFiles.length > 0) {
-            console.log(
-              `Found ${recentFiles.length} recent files from ${endpoint}`
-            );
-            return recentFiles;
-          }
-        } catch (error) {
-          console.log(`❌ FAILED: ${endpoint} -`, (error as Error).message);
-        }
-      }
-
-      // Try to get user activity/feed endpoints
-      const activityEndpoints = [
-        `/users/${user.id}/activity`,
-        `/me/activity`,
-        `/activity`,
-        `/feed`,
-        `/users/${user.id}/feed`,
-      ];
-
-      for (const endpoint of activityEndpoints) {
-        try {
-          console.log(`Trying activity endpoint: ${endpoint}`);
-          const response = await this.makeRequest<Record<string, unknown>>(
-            endpoint
-          );
-          console.log(`✅ ACTIVITY SUCCESS: ${endpoint}`, response);
-
-          // Parse activity for file references
-          if (response && Array.isArray(response.activity)) {
-            response.activity.forEach((item: Record<string, unknown>) => {
-              if (
-                item.file &&
-                typeof item.file === "object" &&
-                item.file !== null
-              ) {
-                const fileObj = item.file as Record<string, unknown>;
-                if (typeof fileObj.key === "string") {
-                  recentFiles.push({
-                    key: fileObj.key,
-                    name:
-                      typeof fileObj.name === "string"
-                        ? fileObj.name
-                        : "Untitled",
-                    thumbnail_url:
-                      typeof fileObj.thumbnail_url === "string"
-                        ? fileObj.thumbnail_url
-                        : undefined,
-                    last_modified:
-                      typeof item.created_at === "string"
-                        ? item.created_at
-                        : typeof item.updated_at === "string"
-                        ? item.updated_at
-                        : "",
-                    role: "viewer",
-                    project_name: "Recent Activity",
-                  });
-                }
-              }
-            });
-          }
-        } catch (error) {
-          console.log(
-            `❌ ACTIVITY FAILED: ${endpoint} -`,
-            (error as Error).message
-          );
-        }
-      }
-
-      console.log(
-        `=== RECENT FILES SEARCH COMPLETE: ${recentFiles.length} files found ===`
-      );
-      return recentFiles;
-    } catch (error) {
-      console.error("Error in experimental recent files search:", error);
-      return [];
-    }
+    // Figma API doesn't support direct access to personal drafts/recent files
+    // All file access must go through teams and projects
+    console.log("📝 Note: Figma API doesn't support personal drafts access");
+    return [];
   }
 
   /**

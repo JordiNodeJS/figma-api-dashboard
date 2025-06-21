@@ -254,7 +254,11 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
           }
         } else {
           alert(
-            "❌ No se encontraron archivos recientes a través de la búsqueda experimental.\n\nLa API de Figma no expone endpoints públicos para drafts personales."
+            "❌ Como era esperado, no se encontraron archivos.\n\n" +
+              "💡 Esto es normal: La API pública de Figma no permite acceso a drafts personales.\n\n" +
+              "✅ Soluciones disponibles:\n" +
+              "• Usar 'Añadir Más Archivos' con URLs directas\n" +
+              "• Organizar archivos en equipos de Figma para acceso automático"
           );
         }
       } else {
@@ -356,13 +360,12 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
               }`}
             />
             Auto-sync
-          </button>
-
-          {/* Experimental Recent Files Button */}
+          </button>{" "}
+          {/* API Limitation Test Button */}
           <button
             onClick={testRecentFiles}
-            className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors duration-200 text-sm bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:hover:bg-purple-900/30"
-            title="Probar búsqueda experimental de drafts personales"
+            className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors duration-200 text-sm bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:hover:bg-orange-900/30"
+            title="Demuestra por qué la API de Figma no puede acceder a drafts personales"
           >
             <svg
               className="w-4 h-4"
@@ -374,12 +377,11 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"
               />
             </svg>
-            Experimental
+            Limitación API
           </button>
-
           {/* Add Files Button */}
           <a
             href="/discovery"
@@ -470,11 +472,11 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
                 • <strong>Drafts personales no accesibles:</strong> Los drafts
                 privados/personales no se pueden sincronizar automáticamente via
                 API oficial
-              </p>
+              </p>{" "}
               <p>
                 • <strong>Búsqueda experimental:</strong> Usa el botón{" "}
-                <strong>&quot;Experimental&quot;</strong> para probar endpoints
-                no documentados
+                <strong>&quot;Limitación API&quot;</strong> para demostrar por
+                qué no funcionan endpoints no documentados
               </p>
               <p>
                 • <strong>Añadir manualmente:</strong> Usa{" "}
@@ -490,10 +492,10 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
               <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                 <p className="text-yellow-800 dark:text-yellow-200 font-medium text-xs">
                   💡 <strong>¿Esperabas ver más archivos?</strong>
-                </p>
+                </p>{" "}
                 <p className="text-yellow-700 dark:text-yellow-300 text-xs mt-1">
-                  1. Prueba el botón <strong>&quot;Experimental&quot;</strong>{" "}
-                  para buscar drafts personales
+                  1. El botón <strong>&quot;Limitación API&quot;</strong>{" "}
+                  demuestra las limitaciones de la API pública
                   <br />
                   2. Si tienes más drafts en Figma, ve a figma.com → copia las
                   URLs → úsalas en{" "}

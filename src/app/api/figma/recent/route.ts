@@ -8,9 +8,7 @@ export async function GET(request: NextRequest) {
     const accessToken = clientToken || process.env.FIGMA_ACCESS_TOKEN;
 
     console.log("=== EXPERIMENTAL RECENT FILES API CALL ===");
-    console.log("Client token present:", !!clientToken);
-    console.log("Server token present:", !!process.env.FIGMA_ACCESS_TOKEN);
-    console.log("Using token type:", clientToken ? "client" : "server");
+    console.log("📝 Note: Figma API doesn't support personal drafts access");
 
     if (!accessToken) {
       return NextResponse.json(
@@ -21,17 +19,16 @@ export async function GET(request: NextRequest) {
 
     const figmaClient = new FigmaClient(accessToken);
 
-    console.log("Attempting experimental recent files discovery...");
+    // This will now return empty array - Figma doesn't support personal drafts access
     const recentFiles = await figmaClient.getRecentFiles();
-
-    console.log(`Experimental search found ${recentFiles.length} recent files`);
 
     return NextResponse.json({
       recentFiles,
       count: recentFiles.length,
       experimental: true,
       message:
-        "This endpoint attempts to discover recent files through various API endpoints",
+        "Figma API doesn't provide access to personal drafts. Use team discovery or manual URL addition instead.",
+      limitation: "Personal drafts are not accessible via Figma's public API",
     });
   } catch (error) {
     console.error("Error in experimental recent files search:", error);
