@@ -97,7 +97,7 @@ Tools:
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/tu-usuario/figma-api-dashboard.git
+git clone https://github.com/JordiNodeJS/figma-api-dashboard.git
 cd figma-api-dashboard
 
 # Instalar dependencias (recomendado con Bun)
@@ -291,11 +291,11 @@ MIT License - ver [LICENSE.md](LICENSE.md) para detalles.
 
 ## 👨‍💻 Autor
 
-**[Tu Nombre]** - Full Stack Developer
+**JordiNodeJS** - Full Stack Developer
 
 - Portfolio: [tu-portfolio.com](https://tu-portfolio.com)
 - LinkedIn: [tu-linkedin](https://linkedin.com/in/tu-perfil)
-- GitHub: [tu-github](https://github.com/tu-usuario)
+- GitHub: [JordiNodeJS](https://github.com/JordiNodeJS)
 
 ---
 
