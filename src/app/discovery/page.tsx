@@ -75,8 +75,7 @@ export default function FileDiscoveryTool() {
     setResults((prev) => [result, ...prev]);
     setFileUrl("");
     setLoading(false);
-  };
-  const addToMyFiles = async (fileData: {
+  };  const addToMyFiles = async (fileData: {
     key: string;
     name: string;
     role: string;
@@ -84,8 +83,8 @@ export default function FileDiscoveryTool() {
     try {
       setAdding(fileData.key);
 
-      // Add to local storage directly
-      addUserFile({
+      // Add to both localStorage and server
+      await addUserFile({
         key: fileData.key,
         name: fileData.name,
         role: fileData.role,
@@ -104,7 +103,8 @@ export default function FileDiscoveryTool() {
           fileData.name
         )}`
       );
-    } catch {
+    } catch (error) {
+      console.error("Error adding file:", error);
       alert("Error al añadir archivo");
       setAdding(null);
     }
@@ -122,10 +122,10 @@ export default function FileDiscoveryTool() {
       }
 
       const fileKey = fileKeyMatch[1];
-      setAdding(fileKey);
+      setAdding(fileKey);      const defaultName = fileName || `Archivo de Figma (${fileKey})`;
 
-      const defaultName = fileName || `Archivo de Figma (${fileKey})`; // Add directly to user files even if not fully accessible
-      addUserFile({
+      // Add directly to both localStorage and server
+      await addUserFile({
         key: fileKey,
         name: defaultName,
         role: "viewer", // Default role for community files
