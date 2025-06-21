@@ -7,9 +7,12 @@ interface DraftCardProps {
   onUpdateThumbnail?: (fileKey: string) => Promise<boolean>;
 }
 
-export default function DraftCard({ draft, onUpdateThumbnail }: DraftCardProps) {
+export default function DraftCard({
+  draft,
+  onUpdateThumbnail,
+}: DraftCardProps) {
   const [updatingThumbnail, setUpdatingThumbnail] = useState(false);
-  
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-ES", {
       year: "numeric",
@@ -27,7 +30,7 @@ export default function DraftCard({ draft, onUpdateThumbnail }: DraftCardProps) 
 
   const handleUpdateThumbnail = async () => {
     if (!onUpdateThumbnail) return;
-    
+
     setUpdatingThumbnail(true);
     try {
       await onUpdateThumbnail(draft.key);
@@ -47,7 +50,8 @@ export default function DraftCard({ draft, onUpdateThumbnail }: DraftCardProps) 
               className="object-cover"
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />          ) : (
+            />
+          ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
               <div className="text-center">
                 <svg
@@ -68,15 +72,16 @@ export default function DraftCard({ draft, onUpdateThumbnail }: DraftCardProps) 
                     ? "Archivo Manual"
                     : "Sin vista previa"}
                 </p>
-                {onUpdateThumbnail && draft.project_name !== "Archivos Manuales" && (
-                  <button
-                    onClick={handleUpdateThumbnail}
-                    disabled={updatingThumbnail}
-                    className="text-xs bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded transition-colors disabled:opacity-50"
-                  >
-                    {updatingThumbnail ? "Cargando..." : "🔄 Cargar vista"}
-                  </button>
-                )}
+                {onUpdateThumbnail &&
+                  draft.project_name !== "Archivos Manuales" && (
+                    <button
+                      onClick={handleUpdateThumbnail}
+                      disabled={updatingThumbnail}
+                      className="text-xs bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                    >
+                      {updatingThumbnail ? "Cargando..." : "🔄 Cargar vista"}
+                    </button>
+                  )}
               </div>
             </div>
           )}

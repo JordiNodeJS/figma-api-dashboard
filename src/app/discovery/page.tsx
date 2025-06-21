@@ -11,7 +11,8 @@ import { useUserFiles } from "@/hooks/use-user-files";
 interface FileDiscoveryResult {
   url: string;
   fileKey: string;
-  accessible: boolean;  fileData?: {
+  accessible: boolean;
+  fileData?: {
     key: string;
     name: string;
     role: string;
@@ -79,7 +80,8 @@ export default function FileDiscoveryTool() {
     setResults((prev) => [result, ...prev]);
     setFileUrl("");
     setLoading(false);
-  };  const addToMyFiles = async (fileData: {
+  };
+  const addToMyFiles = async (fileData: {
     key: string;
     name: string;
     role: string;
@@ -177,11 +179,12 @@ export default function FileDiscoveryTool() {
 
       const data = await response.json();
 
-      if (response.ok) {        // Convert team files to discovery results format
+      if (response.ok) {
+        // Convert team files to discovery results format
         const teamResults: FileDiscoveryResult[] = data.files.map(
-          (file: { 
-            key: string; 
-            name: string; 
+          (file: {
+            key: string;
+            name: string;
             role: string;
             thumbnail_url?: string;
             last_modified?: string;
@@ -517,7 +520,8 @@ export default function FileDiscoveryTool() {
                       >
                         {result.accessible ? "Accesible" : "No Accesible"}
                       </span>
-                    </div>                    {result.fileData && (
+                    </div>{" "}
+                    {result.fileData && (
                       <div className="mb-3">
                         {/* Thumbnail preview */}
                         {result.fileData.thumbnail_url && (
@@ -540,11 +544,9 @@ export default function FileDiscoveryTool() {
                         </p>
                       </div>
                     )}
-
                     <p className="text-sm text-gray-600 dark:text-gray-400 break-all">
                       {result.url}
                     </p>
-
                     {result.error && (
                       <p className="text-sm text-red-600 dark:text-red-400 mt-1">
                         Error: {result.error}
