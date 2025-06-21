@@ -93,8 +93,10 @@ export default function FileDiscoveryTool() {
         project_name: "Mis Archivos",
       });
 
-      // Small delay to show the loading state and success
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      // Wait a bit longer to ensure the state update propagates
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      console.log("🚀 Redirecting to drafts with new file:", fileData.key);
 
       // Redirect to main page with drafts tab and highlight the new file
       router.push(
@@ -122,9 +124,7 @@ export default function FileDiscoveryTool() {
       const fileKey = fileKeyMatch[1];
       setAdding(fileKey);
 
-      const defaultName = fileName || `Archivo de Figma (${fileKey})`;
-
-      // Add directly to user files even if not fully accessible
+      const defaultName = fileName || `Archivo de Figma (${fileKey})`; // Add directly to user files even if not fully accessible
       addUserFile({
         key: fileKey,
         name: defaultName,
@@ -134,8 +134,10 @@ export default function FileDiscoveryTool() {
         thumbnail_url: undefined, // Will be empty for community files
       });
 
-      // Small delay to show the loading state and success
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      // Wait a bit longer to ensure the state update propagates
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      console.log("🚀 Redirecting to drafts with manual file:", fileKey);
 
       // Redirect to main page with drafts tab and highlight the new file
       router.push(

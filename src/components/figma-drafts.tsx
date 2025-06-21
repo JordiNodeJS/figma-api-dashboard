@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { FigmaDraft } from "@/types/figma";
 import DraftCard from "@/components/draft-card";
 import LoadingSpinner from "@/components/loading-spinner";
+import DebugUserFiles from "@/components/debug-user-files";
 import { useUserFiles } from "@/hooks/use-user-files";
 import { useFigmaToken } from "@/hooks/use-figma-token";
 import FigmaTokenSetup from "@/components/figma-token-setup";
@@ -59,10 +60,11 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
         }
 
         // Only update state if component is still mounted
-        if (!mountedRef.current) return;
-
-        // Combine API drafts with user files
+        if (!mountedRef.current) return; // Combine API drafts with user files
         const apiDrafts = data.drafts || [];
+        console.log("📊 User files:", userFiles.length);
+        console.log("📊 API drafts:", apiDrafts.length);
+
         const combinedDrafts = [
           ...userFiles.map((file) => ({
             ...file,
@@ -74,6 +76,7 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
           ),
         ];
 
+        console.log("📊 Combined drafts:", combinedDrafts.length);
         setDrafts(combinedDrafts);
         setLastSyncTime(new Date());
 
@@ -89,14 +92,24 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
       }
     },
     [userFiles, token]
-  );
-  // Handle new file highlighting
+  ); // Handle new file highlighting
   useEffect(() => {
     if (newFileKey) {
       setHighlightedFile(newFileKey);
       // Force a refresh to ensure the new file is visible
-      if (!userFilesLoading && !tokenLoading && hasToken) {
-        fetchDrafts(undefined, false); // Refresh without loading spinner
+      // Always refresh when there's a new file, regardless of token status
+      if (!userFilesLoading) {
+        if (hasToken && !tokenLoading) {
+          fetchDrafts(undefined, false); // Refresh with API if token available
+        } else {
+          // If no token, just update with user files directly
+          console.log("🔄 Updating drafts with user files only (no token)");
+          const combinedDrafts = userFiles.map((file) => ({
+            ...file,
+            project_name: file.project_name || "Mis Archivos",
+          }));
+          setDrafts(combinedDrafts);
+        }
       }
       // Remove highlight after 10 seconds
       const timer = setTimeout(() => {
@@ -118,7 +131,37 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
         clearTimeout(scrollTimer);
       };
     }
-  }, [newFileKey, userFilesLoading, tokenLoading, hasToken, fetchDrafts]);
+  }, [
+    newFileKey,
+    userFilesLoading,
+    tokenLoading,
+    hasToken,
+    fetchDrafts,
+    userFiles,
+  ]);
+
+  // Update drafts when userFiles change
+  useEffect(() => {
+    if (!userFilesLoading) {
+      console.log("🔄 User files changed, updating drafts...");
+      if (hasToken && !tokenLoading) {
+        // If we have a token, use the full fetch (combines userFiles + API)
+        fetchDrafts(undefined, false);
+      } else {
+        // If no token, just show user files
+        console.log("📝 No token available, showing user files only");
+        const combinedDrafts = userFiles.map((file) => ({
+          ...file,
+          project_name: file.project_name || "Mis Archivos",
+        }));
+        setDrafts(combinedDrafts);
+        console.log(
+          "✅ Drafts updated with user files:",
+          combinedDrafts.length
+        );
+      }
+    }
+  }, [userFiles, userFilesLoading, hasToken, tokenLoading, fetchDrafts]);
 
   // Auto-sync functionality
   const startAutoSync = useCallback(() => {
@@ -146,18 +189,35 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
       console.log("Auto-sync stopped");
     }
   }, []);
-
   // Initial load effect
   useEffect(() => {
+    console.log("🔄 Initial load effect triggered", {
+      userFilesLoading,
+      tokenLoading,
+      hasToken,
+      userFilesCount: userFiles.length,
+    });
+
     if (!userFilesLoading && !tokenLoading && hasToken) {
       // Initial delay before first sync
+      console.log("✅ Starting initial sync with API...");
       const timeout = setTimeout(() => {
         fetchDrafts();
       }, INITIAL_SYNC_DELAY);
 
       return () => clearTimeout(timeout);
+    } else if (!userFilesLoading && (!hasToken || tokenLoading)) {
+      // If no token but we have user files, show them immediately
+      console.log("📝 No token available, showing user files immediately");
+      const combinedDrafts = userFiles.map((file) => ({
+        ...file,
+        project_name: file.project_name || "Mis Archivos",
+      }));
+      setDrafts(combinedDrafts);
+      setLoading(false);
+      console.log("✅ Initialized with user files:", combinedDrafts.length);
     }
-  }, [userFilesLoading, tokenLoading, hasToken, fetchDrafts]);
+  }, [userFilesLoading, tokenLoading, hasToken, fetchDrafts, userFiles]);
 
   // Auto-sync setup effect
   useEffect(() => {
@@ -254,10 +314,11 @@ export default function FigmaDrafts({ newFileKey }: FigmaDraftsProps) {
   if (!hasToken) {
     return <FigmaTokenSetup />;
   }
-
   return (
     <div className="space-y-6">
-      {" "}
+      {/* Debug Component - Remove this in production */}
+      <DebugUserFiles />
+
       {/* Search and Actions */}
       <div className="flex flex-col sm:flex-row gap-4">
         <form onSubmit={handleSearch} className="flex gap-4 flex-1">
